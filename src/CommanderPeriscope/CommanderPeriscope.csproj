@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Settings.Configuration" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommanderPeriscope.Domain\CommanderPeriscope.Domain.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildScss" BeforeTargets="Build">
+    <Exec Command="npm run build:scss" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+</Project>

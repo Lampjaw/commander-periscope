@@ -1,0 +1,61 @@
+name: Release - Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version
+        required: true
+        type: string
+      prerelease:
+        description: Is this a prerelease?
+        required: true
+        type: boolean
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?(\+[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "::error::Version '${{ inputs.version }}' is not valid semver (expected X.Y.Z or X.Y.Z-prerelease)"
+            exit 1
+          fi
+
+      - id: app-token
+        name: Generate app token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIV_KEY }}
+
+      - id: get-user-id
+        name: Get GitHub app user ID
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: "${{ steps.app-token.outputs.token }}"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: "${{ steps.app-token.outputs.token }}"
+
+      - name: Commit and push
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+          git pull
+          git commit -a -m "release: ${{ inputs.version }}" --allow-empty
+          git tag "v${{ inputs.version }}" HEAD -m "v${{ inputs.version }}"
+          git push --follow-tags
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          token: "${{ steps.app-token.outputs.token }}"
+          tag_name: "v${{ inputs.version }}"
+          name: Release ${{ inputs.version }}
+          draft: true
+          prerelease: ${{ inputs.prerelease == 'true' }}
+          generate_release_notes: true

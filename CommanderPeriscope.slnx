@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CommanderPeriscope/CommanderPeriscope.csproj" />
+    <Project Path="src/CommanderPeriscope.Domain/CommanderPeriscope.Domain.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/CommanderPeriscope.Domain.Tests/CommanderPeriscope.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

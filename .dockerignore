@@ -1,0 +1,12 @@
+bin
+obj
+.vs
+.git
+.dockerignore
+.gitignore
+.gitattributes
+build
+testsettings.json
+devsettings.json
+.bat
+.sh

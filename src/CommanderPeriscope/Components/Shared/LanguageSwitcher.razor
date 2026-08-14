@@ -1,0 +1,8 @@
+@* Culture list is driven by Bootstrap.SupportedCultures. Only "en" ships today; add a new
+   .resx + entry there (see CLAUDE.md > Localization) to light up another option here. *@
+<select class="text-sm">
+    @foreach (var culture in Bootstrap.SupportedCultures)
+    {
+        <option value="@culture">@culture</option>
+    }
+</select>

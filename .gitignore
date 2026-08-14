@@ -55,3 +55,8 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Node / frontend build
+node_modules/
+src/CommanderPeriscope/wwwroot/css/*.css
+src/CommanderPeriscope/wwwroot/css/*.css.map
