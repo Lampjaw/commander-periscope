@@ -148,11 +148,14 @@
   <data name="SaveOptions" xml:space="preserve">
     <value>Save</value>
   </data>
-  <data name="GameInProgress" xml:space="preserve">
-    <value>Game in progress — role screens are coming in a later phase.</value>
+  <data name="RoleScreenComingSoon" xml:space="preserve">
+    <value>Game in progress — role-specific screens are coming in a later phase. This view shows the shared chrome only.</value>
   </data>
-  <data name="GamePaused" xml:space="preserve">
+  <data name="GamePausedDisconnect" xml:space="preserve">
     <value>Paused — waiting for player reconnect.</value>
+  </data>
+  <data name="GamePausedHost" xml:space="preserve">
+    <value>Paused by the host.</value>
   </data>
   <data name="PauseButton" xml:space="preserve">
     <value>Pause</value>
@@ -162,5 +165,29 @@
   </data>
   <data name="RestartButton" xml:space="preserve">
     <value>Restart</value>
+  </data>
+  <data name="Surfaced" xml:space="preserve">
+    <value>Surfaced</value>
+  </data>
+  <data name="Submerged" xml:space="preserve">
+    <value>Submerged</value>
+  </data>
+  <data name="MapGridLabel" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="GameClockTooltip" xml:space="preserve">
+    <value>Elapsed time — informational only, no gameplay effect.</value>
+  </data>
+  <data name="RematchButton" xml:space="preserve">
+    <value>Rematch</value>
+  </data>
+  <data name="RedWinsHeading" xml:space="preserve">
+    <value>Red Wins!</value>
+  </data>
+  <data name="BlueWinsHeading" xml:space="preserve">
+    <value>Blue Wins!</value>
+  </data>
+  <data name="TieHeading" xml:space="preserve">
+    <value>It's a Tie!</value>
   </data>
 </root>

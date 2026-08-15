@@ -1,0 +1,55 @@
+@* Persistent status bar: top bar = own team, bottom bar = enemy team, an ordering that never flips by color. *@
+@implements IDisposable
+
+<div class="status-bar @AccentClass @(_flashing ? "status-bar-flash" : "")">
+    <span class="status-bar-name">@TeamName</span>
+
+    <span class="sub-icon" aria-hidden="true">
+        <span class="sub-icon-wave @(Bar is { Surfaced: true } ? "sub-icon-wave-surfaced" : "sub-icon-wave-submerged")"></span>
+        <span class="sub-icon-hull">
+            @for (var i = 0; i < (Bar?.DamageCapacity ?? 0); i++)
+            {
+                var filled = i < Bar!.DamageChecked;
+                <span class="damage-dot @(filled ? "damage-dot-hit" : "damage-dot-ok")"></span>
+            }
+        </span>
+    </span>
+
+    <span class="status-bar-state">@(Bar is { Surfaced: true } ? L["Surfaced"] : L["Submerged"])</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string TeamName { get; set; } = "";
+
+    [Parameter]
+    public StatusBarView? Bar { get; set; }
+
+    [Parameter]
+    public string AccentClass { get; set; } = "";
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private int _lastChecked;
+    private bool _flashing;
+    private System.Threading.Timer? _flashTimer;
+
+    protected override void OnParametersSet()
+    {
+        if (Bar is not null && Bar.DamageChecked > _lastChecked)
+        {
+            _flashing = true;
+            _flashTimer?.Dispose();
+            _flashTimer = new System.Threading.Timer(_ =>
+            {
+                _flashing = false;
+                InvokeAsync(StateHasChanged);
+            }, null, 600, System.Threading.Timeout.Infinite);
+        }
+
+        _lastChecked = Bar?.DamageChecked ?? 0;
+    }
+
+    public void Dispose() => _flashTimer?.Dispose();
+}

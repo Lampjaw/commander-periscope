@@ -1,5 +1,6 @@
 using CommanderPeriscope.Domain.Engineering;
 using CommanderPeriscope.Domain.Game;
+using CommanderPeriscope.Domain.Maps;
 using CommanderPeriscope.Domain.Submarines;
 using CommanderPeriscope.Domain.Systems;
 using CommanderPeriscope.Visibility.Views;
@@ -11,6 +12,24 @@ public static class GameStateViews
 {
     public static StatusBarView StatusBarFor(Submarine sub) =>
         new(sub.Team, sub.Damage.Checked, sub.Damage.Capacity, sub.Surfaced);
+
+    public static MapView MapViewFor(GameMap map)
+    {
+        var land = new List<Coordinate>();
+        for (var row = 0; row < map.Size; row++)
+        {
+            for (var col = 0; col < map.Size; col++)
+            {
+                var coordinate = new Coordinate(col, row);
+                if (map.IsLand(coordinate))
+                {
+                    land.Add(coordinate);
+                }
+            }
+        }
+
+        return new MapView(map.Size, land);
+    }
 
     public static CaptainView CaptainViewFor(GameEngine engine, Submarine sub) =>
         new(sub.Position, engine.SectorFor(sub), sub.Trail, sub.Mines, sub.CanActivateSystem);

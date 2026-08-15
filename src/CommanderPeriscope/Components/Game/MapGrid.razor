@@ -1,0 +1,89 @@
+@* Shared read-only map rendering primitive (design-doc §3.1.1): dot grid over water/land, column letters (A, B, C…)
+   along the top, row numbers (1, 2, 3…) down the left, and white sector border lines + sector numbers. Reused
+   as-is by the Captain and Radio Operator screens in Phase 6, which layer interactive click targets on top.
+
+   Built as a raw markup string rather than element-by-element Razor markup: Razor's compiler reserves the
+   literal tag name "text" (used internally for the @@text: pseudo-element) and refuses attributes on any
+   element spelled that way (RZ1023) — which SVG's own <text> element collides with. *@
+
+@if (Map is not null)
+{
+    <svg class="map-grid" viewBox="0 0 @(Extent + Margin) @(Extent + Margin)" role="img" aria-label="@L["MapGridLabel"]">
+        @((MarkupString)BuildSvgBody())
+    </svg>
+}
+
+@code {
+    private const int Cell = 28;
+    private const int Margin = 24;
+
+    [Parameter]
+    public MapView? Map { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private int Extent => (Map?.Size ?? 0) * Cell;
+
+    private string BuildSvgBody()
+    {
+        var map = Map!;
+        var sectorsPerSide = map.Size / GameMap.SectorSize;
+        var land = new HashSet<Coordinate>(map.LandCells);
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append($"""<rect x="{Margin}" y="{Margin}" width="{Extent}" height="{Extent}" class="map-grid-bg" />""");
+
+        for (var row = 0; row < map.Size; row++)
+        {
+            for (var col = 0; col < map.Size; col++)
+            {
+                var x = Margin + (col * Cell);
+                var y = Margin + (row * Cell);
+
+                if (land.Contains(new Coordinate(col, row)))
+                {
+                    sb.Append($"""<rect x="{x}" y="{y}" width="{Cell}" height="{Cell}" class="map-grid-land" />""");
+                }
+                else
+                {
+                    sb.Append($"""<circle cx="{x + (Cell / 2)}" cy="{y + (Cell / 2)}" r="2.5" class="map-grid-dot" />""");
+                }
+            }
+        }
+
+        for (var i = 0; i <= sectorsPerSide; i++)
+        {
+            var offset = Margin + (i * GameMap.SectorSize * Cell);
+            sb.Append($"""<line x1="{offset}" y1="{Margin}" x2="{offset}" y2="{Margin + Extent}" class="map-grid-sector-line" />""");
+            sb.Append($"""<line x1="{Margin}" y1="{offset}" x2="{Margin + Extent}" y2="{offset}" class="map-grid-sector-line" />""");
+        }
+
+        var sectorExtent = GameMap.SectorSize * Cell;
+        for (var sr = 0; sr < sectorsPerSide; sr++)
+        {
+            for (var sc = 0; sc < sectorsPerSide; sc++)
+            {
+                var number = (sr * sectorsPerSide) + sc + 1;
+                var left = Margin + (sc * sectorExtent);
+                var top = Margin + (sr * sectorExtent);
+
+                sb.Append($"""<text x="{left + sectorExtent - 4}" y="{top + 14}" class="map-grid-sector-number" text-anchor="end">{number}</text>""");
+                sb.Append($"""<text x="{left + 4}" y="{top + sectorExtent - 6}" class="map-grid-sector-number">{number}</text>""");
+            }
+        }
+
+        for (var col = 0; col < map.Size; col++)
+        {
+            var label = (char)('A' + col);
+            sb.Append($"""<text x="{Margin + (col * Cell) + (Cell / 2)}" y="{Margin - 8}" class="map-grid-axis-label" text-anchor="middle">{label}</text>""");
+        }
+
+        for (var row = 0; row < map.Size; row++)
+        {
+            sb.Append($"""<text x="{Margin - 8}" y="{Margin + (row * Cell) + (Cell / 2) + 4}" class="map-grid-axis-label" text-anchor="end">{row + 1}</text>""");
+        }
+
+        return sb.ToString();
+    }
+}

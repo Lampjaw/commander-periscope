@@ -1,0 +1,39 @@
+@* Informational elapsed-time display only — no gameplay effect, enforces no turn/action clock. *@
+@implements IAsyncDisposable
+
+<span class="game-clock" title="@L["GameClockTooltip"]">@_elapsed.ToString(@"mm\:ss")</span>
+
+@code {
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private readonly DateTime _startedAt = DateTime.UtcNow;
+    private TimeSpan _elapsed;
+    private PeriodicTimer? _timer;
+    private Task? _tickLoop;
+
+    protected override void OnInitialized()
+    {
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _tickLoop = RunAsync();
+    }
+
+    private async Task RunAsync()
+    {
+        while (_timer is not null && await _timer.WaitForNextTickAsync())
+        {
+            _elapsed = DateTime.UtcNow - _startedAt;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _timer?.Dispose();
+        _timer = null;
+        if (_tickLoop is not null)
+        {
+            await _tickLoop;
+        }
+    }
+}

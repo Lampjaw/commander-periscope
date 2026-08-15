@@ -1,0 +1,23 @@
+@inject IStringLocalizer<SharedResource> L
+
+@if (PauseReason is not PauseReason.None)
+{
+    <div class="pause-overlay" role="alert">
+        <p>@(PauseReason == PauseReason.Disconnect ? L["GamePausedDisconnect"] : L["GamePausedHost"])</p>
+    </div>
+}
+
+<div class="toast-feed">
+    @foreach (var message in Messages.TakeLast(5))
+    {
+        <div class="toast">@message</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Messages { get; set; } = [];
+
+    [Parameter]
+    public PauseReason PauseReason { get; set; }
+}

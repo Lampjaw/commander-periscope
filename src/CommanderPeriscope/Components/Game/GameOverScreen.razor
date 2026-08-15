@@ -1,0 +1,47 @@
+@inject IStringLocalizer<SharedResource> L
+
+@if (Result is not null)
+{
+    <div class="game-over-overlay">
+        <div class="game-over-card">
+            <h2>@ResultHeading</h2>
+
+            @if (Log.Count > 0)
+            {
+                <ol class="game-over-log">
+                    @foreach (var entry in Log)
+                    {
+                        <li>@entry</li>
+                    }
+                </ol>
+            }
+
+            @if (IsHost)
+            {
+                <button class="btn-primary" @onclick="() => OnRematch.InvokeAsync()">@L["RematchButton"]</button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public WinResult? Result { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string> Log { get; set; } = [];
+
+    [Parameter]
+    public bool IsHost { get; set; }
+
+    [Parameter]
+    public EventCallback OnRematch { get; set; }
+
+    private string ResultHeading => Result switch
+    {
+        WinResult.RedWins => L["RedWinsHeading"],
+        WinResult.BlueWins => L["BlueWinsHeading"],
+        WinResult.Tie => L["TieHeading"],
+        _ => "",
+    };
+}

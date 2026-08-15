@@ -1,0 +1,203 @@
+@page "/game/{Code}"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CommanderPeriscope.Domain.Game
+@using Microsoft.AspNetCore.SignalR.Client
+@inject LobbyService LobbyService
+@inject PlayerIdentityService PlayerIdentity
+@inject CircuitPlayerContext CircuitContext
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> L
+@implements IAsyncDisposable
+
+@if (_lobby is null)
+{
+    <p class="p-6 text-slate-500">@L["LoadingLobby"]</p>
+}
+else
+{
+    <div class="mx-auto max-w-5xl space-y-4 p-4">
+        <StatusBar TeamName="@OwnTeamName" Bar="OwnBar" AccentClass="@(MyColor == TeamColor.Red ? "status-bar-red" : "status-bar-blue")" />
+        <StatusBar TeamName="@EnemyTeamName" Bar="EnemyBar" AccentClass="@(MyColor == TeamColor.Red ? "status-bar-blue" : "status-bar-red")" />
+
+        <ToastFeed Messages="_toasts" PauseReason="_lobby.Status == LobbyStatus.Paused ? _lobby.PauseReason : PauseReason.None" />
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <GameClock />
+
+            @if (IsHost)
+            {
+                <div class="flex items-center gap-2">
+                    @if (_lobby.Status == LobbyStatus.InProgress)
+                    {
+                        <button class="btn-secondary" @onclick="Pause">@L["PauseButton"]</button>
+                    }
+                    else if (_lobby.Status == LobbyStatus.Paused && _lobby.PauseReason == PauseReason.Host)
+                    {
+                        <button class="btn-secondary" @onclick="Resume">@L["ResumeButton"]</button>
+                    }
+                    <button class="btn-secondary" @onclick="RestartToLobby">@L["RestartButton"]</button>
+                </div>
+            }
+        </div>
+
+        <div class="map-grid-wrap">
+            <MapGrid Map="_map" />
+        </div>
+
+        <p class="rounded-md bg-slate-100 p-3 text-sm text-slate-600">@L["RoleScreenComingSoon"]</p>
+
+        @if (_error is not null)
+        {
+            <p role="alert" class="rounded-md bg-red-100 p-3 text-red-800">@_error</p>
+        }
+    </div>
+
+    <GameOverScreen Result="_gameOverResult" Log="_toasts" IsHost="IsHost" OnRematch="RematchAsync" />
+}
+
+@code {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    [Parameter]
+    public string Code { get; set; } = "";
+
+    private CommanderPeriscope.Lobby.Lobby? _lobby;
+    private string? _playerId;
+    private HubConnection? _hub;
+    private MapView? _map;
+    private StatusBarView? _redBar;
+    private StatusBarView? _blueBar;
+    private WinResult? _gameOverResult;
+    private readonly List<string> _toasts = [];
+    private string? _error;
+
+    private bool IsHost => _lobby is not null && _playerId == _lobby.HostPlayerId;
+    private TeamColor? MyColor => _lobby?.RosterOf(_playerId ?? "")?.Color;
+    private StatusBarView? OwnBar => MyColor == TeamColor.Blue ? _blueBar : _redBar;
+    private StatusBarView? EnemyBar => MyColor == TeamColor.Blue ? _redBar : _blueBar;
+    private string OwnTeamName => (MyColor == TeamColor.Blue ? _lobby?.Blue.SubmarineName : _lobby?.Red.SubmarineName) ?? "";
+    private string EnemyTeamName => (MyColor == TeamColor.Blue ? _lobby?.Red.SubmarineName : _lobby?.Blue.SubmarineName) ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _playerId = await PlayerIdentity.GetOrCreatePlayerIdAsync();
+        _lobby = LobbyService.TryGet(Code);
+
+        if (_lobby is null)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (_lobby.Status == LobbyStatus.Open)
+        {
+            Navigation.NavigateTo($"/lobby/{Code}");
+            return;
+        }
+
+        CircuitContext.SetPlayer(Code, _playerId);
+        LobbyService.LobbyChanged += OnLobbyChanged;
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/game"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<string, object>("ScopedUpdate", HandleScopedUpdate);
+        _hub.Reconnected += _ => _hub.InvokeAsync("JoinGame", Code, _playerId);
+
+        await _hub.StartAsync();
+        await _hub.InvokeAsync("JoinGame", Code, _playerId);
+    }
+
+    private void HandleScopedUpdate(string type, object payload)
+    {
+        var json = (JsonElement)payload;
+        switch (type)
+        {
+            case nameof(MapView):
+                _map = json.Deserialize<MapView>(JsonOptions);
+                break;
+            case nameof(StatusBarView):
+                var bar = json.Deserialize<StatusBarView>(JsonOptions)!;
+                if (bar.Team == TeamColor.Red)
+                {
+                    _redBar = bar;
+                }
+                else
+                {
+                    _blueBar = bar;
+                }
+
+                break;
+            case nameof(GameToastPayload):
+                _toasts.Add(json.Deserialize<GameToastPayload>(JsonOptions)!.Message);
+                break;
+            case nameof(SurfaceRevealPayload):
+                var reveal = json.Deserialize<SurfaceRevealPayload>(JsonOptions)!;
+                _toasts.Add($"{reveal.SurfacedTeam} surfaced in sector {reveal.Sector} — blocked: {string.Join(", ", reveal.BlockedColors)}.");
+                break;
+            case nameof(GameOverPayload):
+                _gameOverResult = json.Deserialize<GameOverPayload>(JsonOptions)!.Result;
+                break;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLobbyChanged(string code)
+    {
+        if (code != Code)
+        {
+            return;
+        }
+
+        _lobby = LobbyService.TryGet(Code);
+
+        if (_lobby is { Status: LobbyStatus.Open })
+        {
+            InvokeAsync(() => Navigation.NavigateTo($"/lobby/{Code}"));
+            return;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Pause() => Guard(() => LobbyService.Pause(Code, _playerId!));
+
+    private void Resume() => Guard(() => LobbyService.Resume(Code, _playerId!));
+
+    private void RestartToLobby() => Guard(() => LobbyService.RestartToLobby(Code, _playerId!));
+
+    private Task RematchAsync()
+    {
+        RestartToLobby();
+        return Task.CompletedTask;
+    }
+
+    private void Guard(Action action)
+    {
+        try
+        {
+            action();
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        LobbyService.LobbyChanged -= OnLobbyChanged;
+        if (_hub is not null)
+        {
+            await _hub.DisposeAsync();
+        }
+    }
+}

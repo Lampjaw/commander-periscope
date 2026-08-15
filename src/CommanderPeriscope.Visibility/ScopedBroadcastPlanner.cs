@@ -29,7 +29,10 @@ public static class ScopedBroadcastPlanner
     /// <summary>The full set of role-scoped views for both teams — used to seed a client on connect/reconnect.</summary>
     public static IReadOnlyList<ScopedBroadcast> PlanFullStateRefresh(string gameId, GameEngine engine)
     {
-        var broadcasts = new List<ScopedBroadcast>(PlanStatusBars(gameId, engine));
+        var broadcasts = new List<ScopedBroadcast>(PlanStatusBars(gameId, engine))
+        {
+            new(GroupNames.AllPlayers(gameId), GameStateViews.MapViewFor(engine.Map)),
+        };
 
         foreach (var team in new[] { TeamColor.Red, TeamColor.Blue })
         {

@@ -18,4 +18,146 @@
   .field {
     @apply rounded-md border border-slate-300 bg-white px-2 py-1 text-sm;
   }
+
+  // --- §3.7 Persistent status bars ---
+
+  .status-bar {
+    @apply flex items-center gap-3 rounded-md px-4 py-2 text-white;
+    transition: background-color 200ms ease;
+  }
+
+  .status-bar-red {
+    background-color: theme("colors.red.400" / 55%);
+  }
+
+  .status-bar-blue {
+    background-color: theme("colors.blue.400" / 55%);
+  }
+
+  .status-bar-name {
+    @apply flex-1 font-semibold;
+  }
+
+  .status-bar-state {
+    @apply text-xs uppercase tracking-wide opacity-80;
+  }
+
+  .status-bar-flash {
+    animation: status-bar-flash 600ms ease-out;
+  }
+
+  @keyframes status-bar-flash {
+    0%, 100% {
+      box-shadow: none;
+    }
+    30% {
+      box-shadow: 0 0 0 3px theme("colors.red.500") inset;
+    }
+  }
+
+  .sub-icon {
+    @apply relative flex h-6 w-16 items-center justify-center;
+  }
+
+  .sub-icon-hull {
+    @apply relative z-10 flex items-center gap-1;
+  }
+
+  .damage-dot {
+    @apply h-2.5 w-2.5 rounded-full border border-white/70;
+  }
+
+  .damage-dot-ok {
+    @apply bg-green-400;
+  }
+
+  .damage-dot-hit {
+    @apply bg-red-600;
+  }
+
+  .sub-icon-wave {
+    @apply pointer-events-none absolute left-0 h-0.5 w-full rounded-full bg-white/80;
+    transition: top 400ms ease;
+  }
+
+  .sub-icon-wave-submerged {
+    top: -6px;
+  }
+
+  .sub-icon-wave-surfaced {
+    top: 10px;
+  }
+
+  // --- §3.8 Toast feed + pause overlay ---
+
+  .toast-feed {
+    @apply flex flex-col gap-1;
+  }
+
+  .toast {
+    @apply rounded-md bg-slate-800/90 px-3 py-1.5 text-sm text-white shadow-sm;
+  }
+
+  .pause-overlay {
+    // Informational only — the host's own Pause/Resume/Restart controls must stay clickable underneath it,
+    // and it has no interactive content of its own, so it never captures pointer events.
+    @apply pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 text-lg font-semibold text-white;
+  }
+
+  // --- §3.1.1 Map grid ---
+
+  .map-grid-wrap {
+    @apply flex justify-center rounded-lg bg-slate-900 p-4;
+  }
+
+  .map-grid {
+    @apply h-auto w-full max-w-xl;
+  }
+
+  .map-grid-bg {
+    fill: theme("colors.blue.950");
+  }
+
+  .map-grid-land {
+    fill: theme("colors.stone.500");
+  }
+
+  .map-grid-dot {
+    fill: theme("colors.sky.300");
+  }
+
+  .map-grid-sector-line {
+    stroke: white;
+    stroke-width: 1;
+    opacity: 0.6;
+  }
+
+  .map-grid-sector-number {
+    fill: white;
+    font-size: 10px;
+    opacity: 0.85;
+  }
+
+  .map-grid-axis-label {
+    fill: theme("colors.slate.400");
+    font-size: 11px;
+  }
+
+  // --- Game clock + game-over screen ---
+
+  .game-clock {
+    @apply rounded-md bg-slate-200 px-3 py-1 font-mono text-sm text-slate-700;
+  }
+
+  .game-over-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 p-4;
+  }
+
+  .game-over-card {
+    @apply w-full max-w-sm space-y-4 rounded-lg bg-white p-6 text-center shadow-lg;
+  }
+
+  .game-over-log {
+    @apply max-h-48 list-inside list-decimal space-y-1 overflow-y-auto text-left text-sm text-slate-600;
+  }
 }
