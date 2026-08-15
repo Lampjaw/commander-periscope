@@ -8,11 +8,12 @@
     <title>Commander Periscope</title>
     <base href="/" />
     <link rel="stylesheet" href="css/app.css" />
+    <script src="js/site.js"></script>
     <HeadOutlet />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 

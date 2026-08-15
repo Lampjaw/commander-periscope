@@ -1,5 +1,77 @@
 @page "/"
 @inject IStringLocalizer<SharedResource> L
+@inject LobbyService LobbyService
+@inject PlayerIdentityService PlayerIdentity
+@inject NavigationManager Navigation
 
-<h1>@L["AppTitle"]</h1>
-<p>@L["LandingTagline"]</p>
+<div class="mx-auto max-w-md space-y-8 p-6">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold">@L["AppTitle"]</h1>
+        <p class="text-slate-500">@L["LandingTagline"]</p>
+    </div>
+
+    <section class="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="text-lg font-semibold">@L["CreateLobbyHeading"]</h2>
+        <label class="flex flex-col gap-1 text-sm">
+            @L["DisplayNameLabel"]
+            <input class="field" @bind="_createDisplayName" @bind:event="oninput" maxlength="32" />
+        </label>
+        <button class="btn-primary" @onclick="CreateLobbyAsync" disabled="@string.IsNullOrWhiteSpace(_createDisplayName)">@L["CreateLobbyButton"]</button>
+    </section>
+
+    <section class="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 class="text-lg font-semibold">@L["JoinLobbyHeading"]</h2>
+        <label class="flex flex-col gap-1 text-sm">
+            @L["DisplayNameLabel"]
+            <input class="field" @bind="_joinDisplayName" @bind:event="oninput" maxlength="32" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+            @L["LobbyCodeLabel"]
+            <input class="field font-mono uppercase" @bind="_joinCode" @bind:event="oninput" maxlength="5" />
+        </label>
+        <button class="btn-primary" @onclick="JoinLobbyAsync" disabled="@(string.IsNullOrWhiteSpace(_joinDisplayName) || string.IsNullOrWhiteSpace(_joinCode))">@L["JoinLobbyButton"]</button>
+    </section>
+
+    @if (_error is not null)
+    {
+        <p role="alert" class="rounded-md bg-red-100 p-3 text-red-800">@_error</p>
+    }
+</div>
+
+@code {
+    private string _createDisplayName = "";
+    private string _joinDisplayName = "";
+    private string _joinCode = "";
+    private string? _error;
+
+    private async Task CreateLobbyAsync()
+    {
+        _error = null;
+        try
+        {
+            var playerId = await PlayerIdentity.GetOrCreatePlayerIdAsync();
+            var lobby = LobbyService.CreateLobby(playerId, _createDisplayName.Trim(), "10x10");
+            Navigation.NavigateTo($"/lobby/{lobby.Code}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task JoinLobbyAsync()
+    {
+        _error = null;
+        try
+        {
+            var playerId = await PlayerIdentity.GetOrCreatePlayerIdAsync();
+            var code = _joinCode.Trim().ToUpperInvariant();
+            LobbyService.Join(code, playerId, _joinDisplayName.Trim());
+            Navigation.NavigateTo($"/lobby/{code}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

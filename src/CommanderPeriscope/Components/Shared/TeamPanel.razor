@@ -1,0 +1,87 @@
+@inject IStringLocalizer<SharedResource> L
+
+<div class="team-panel rounded-lg border p-4 shadow-sm @AccentClass">
+    <div class="mb-3 flex items-center gap-2 border-b border-black/10 pb-2 font-semibold">
+        @if (_editingName)
+        {
+            <input class="field flex-1" @bind="_nameDraft" @bind:event="oninput" maxlength="64" />
+            <button class="btn-secondary" @onclick="ConfirmRenameAsync">✓</button>
+        }
+        else
+        {
+            <span class="flex-1">@Roster.SubmarineName</span>
+            @if (IsMyCaptainSeat)
+            {
+                <button class="btn-secondary" @onclick="BeginRename" aria-label="Rename">✎</button>
+            }
+        }
+    </div>
+
+    <div class="space-y-2">
+        @foreach (var role in AllRoles)
+        {
+            var occupantId = Roster.OccupantOf(role);
+            var isActive = Roster.ActiveRoles.Contains(role);
+            var isReady = occupantId is not null && Roster.IsReady(occupantId);
+            <div class="role-row flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full border border-black/20 @(isReady ? "bg-green-500" : "bg-transparent")"></span>
+                <span class="w-28">@role</span>
+
+                @if (!isActive)
+                {
+                    <span class="text-slate-500 italic">@L["MirrorsCaptain"]</span>
+                }
+                else if (occupantId is null)
+                {
+                    <button class="btn-secondary" @onclick="() => OnJoin.InvokeAsync(role)">@L["Join"]</button>
+                }
+                else
+                {
+                    <span>@DisplayNameFor(occupantId)</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly CrewRole[] AllRoles = [CrewRole.Captain, CrewRole.FirstMate, CrewRole.Engineer, CrewRole.RadioOperator];
+
+    [Parameter, EditorRequired]
+    public TeamRoster Roster { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public CommanderPeriscope.Lobby.Lobby Lobby { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string PlayerId { get; set; } = "";
+
+    [Parameter]
+    public string AccentClass { get; set; } = "border-slate-200 bg-white";
+
+    [Parameter]
+    public EventCallback<CrewRole> OnJoin { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRename { get; set; }
+
+    private bool _editingName;
+    private string _nameDraft = "";
+
+    private bool IsMyCaptainSeat => Roster.OccupantOf(CrewRole.Captain) == PlayerId;
+
+    private void BeginRename()
+    {
+        _nameDraft = Roster.SubmarineName;
+        _editingName = true;
+    }
+
+    private async Task ConfirmRenameAsync()
+    {
+        _editingName = false;
+        await OnRename.InvokeAsync(_nameDraft);
+    }
+
+    private string DisplayNameFor(string playerId) =>
+        Lobby.Players.TryGetValue(playerId, out var player) ? player.DisplayName : playerId;
+}

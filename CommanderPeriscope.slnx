@@ -3,9 +3,11 @@
     <Project Path="src/CommanderPeriscope/CommanderPeriscope.csproj" />
     <Project Path="src/CommanderPeriscope.Domain/CommanderPeriscope.Domain.csproj" />
     <Project Path="src/CommanderPeriscope.Visibility/CommanderPeriscope.Visibility.csproj" />
+    <Project Path="src/CommanderPeriscope.Lobby/CommanderPeriscope.Lobby.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/CommanderPeriscope.Domain.Tests/CommanderPeriscope.Domain.Tests.csproj" />
     <Project Path="test/CommanderPeriscope.Visibility.Tests/CommanderPeriscope.Visibility.Tests.csproj" />
+    <Project Path="test/CommanderPeriscope.Lobby.Tests/CommanderPeriscope.Lobby.Tests.csproj" />
   </Folder>
 </Solution>

@@ -64,4 +64,103 @@
   <data name="LandingTagline" xml:space="preserve">
     <value>Dive! Dive! Dive!</value>
   </data>
+  <data name="CreateLobbyHeading" xml:space="preserve">
+    <value>Create Lobby</value>
+  </data>
+  <data name="JoinLobbyHeading" xml:space="preserve">
+    <value>Enter Lobby Code</value>
+  </data>
+  <data name="DisplayNameLabel" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="CreateLobbyButton" xml:space="preserve">
+    <value>Create Lobby</value>
+  </data>
+  <data name="JoinLobbyButton" xml:space="preserve">
+    <value>Join Lobby</value>
+  </data>
+  <data name="LobbyCodeLabel" xml:space="preserve">
+    <value>Lobby code</value>
+  </data>
+  <data name="LoadingLobby" xml:space="preserve">
+    <value>Loading lobby…</value>
+  </data>
+  <data name="Hide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="Show" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="CopyJoinCode" xml:space="preserve">
+    <value>Copy Join Code</value>
+  </data>
+  <data name="PlayersJoined" xml:space="preserve">
+    <value>players joined</value>
+  </data>
+  <data name="Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Unready" xml:space="preserve">
+    <value>Unready</value>
+  </data>
+  <data name="StartGame" xml:space="preserve">
+    <value>Start Game</value>
+  </data>
+  <data name="MirrorsCaptain" xml:space="preserve">
+    <value>(same as Captain)</value>
+  </data>
+  <data name="Join" xml:space="preserve">
+    <value>Join</value>
+  </data>
+  <data name="OptionsHeading" xml:space="preserve">
+    <value>Game Options</value>
+  </data>
+  <data name="MapLabel" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="PacingLabel" xml:space="preserve">
+    <value>Pacing</value>
+  </data>
+  <data name="RedTeamSizeLabel" xml:space="preserve">
+    <value>Red team size</value>
+  </data>
+  <data name="BlueTeamSizeLabel" xml:space="preserve">
+    <value>Blue team size</value>
+  </data>
+  <data name="RadioRelayLabel" xml:space="preserve">
+    <value>Radio Relay</value>
+  </data>
+  <data name="MandatoryDamageReportLabel" xml:space="preserve">
+    <value>Mandatory Damage Report</value>
+  </data>
+  <data name="AutomaticDamageVerificationLabel" xml:space="preserve">
+    <value>Automatic Damage Verification</value>
+  </data>
+  <data name="TraditionalRepairGameLabel" xml:space="preserve">
+    <value>Traditional Repair Game</value>
+  </data>
+  <data name="PauseOnDisconnectLabel" xml:space="preserve">
+    <value>Pause on Player Disconnect</value>
+  </data>
+  <data name="SaveOptions" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="GameInProgress" xml:space="preserve">
+    <value>Game in progress — role screens are coming in a later phase.</value>
+  </data>
+  <data name="GamePaused" xml:space="preserve">
+    <value>Paused — waiting for player reconnect.</value>
+  </data>
+  <data name="PauseButton" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="ResumeButton" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="RestartButton" xml:space="preserve">
+    <value>Restart</value>
+  </data>
 </root>

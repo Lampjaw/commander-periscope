@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommanderPeriscope.Domain\CommanderPeriscope.Domain.csproj" />
+    <ProjectReference Include="..\CommanderPeriscope.Lobby\CommanderPeriscope.Lobby.csproj" />
   </ItemGroup>
 
   <Target Name="BuildScss" BeforeTargets="Build">

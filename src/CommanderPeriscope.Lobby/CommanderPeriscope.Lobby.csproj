@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommanderPeriscope.Domain\CommanderPeriscope.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

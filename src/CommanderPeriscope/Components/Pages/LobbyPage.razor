@@ -1,0 +1,263 @@
+@page "/lobby/{Code}"
+@using CommanderPeriscope.Domain.Game
+@inject LobbyService LobbyService
+@inject PlayerIdentityService PlayerIdentity
+@inject CircuitPlayerContext CircuitContext
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> L
+@implements IDisposable
+
+@if (_lobby is null)
+{
+    <p class="p-6 text-slate-500">@L["LoadingLobby"]</p>
+}
+else
+{
+    <div class="mx-auto max-w-4xl space-y-6 p-6">
+        <header class="lobby-header flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="font-mono text-2xl tracking-widest">@(_codeVisible ? _lobby.Code : new string('*', _lobby.Code.Length))</span>
+                <button class="btn-secondary" @onclick="() => _codeVisible = !_codeVisible">@(_codeVisible ? L["Hide"] : L["Show"])</button>
+                <button class="btn-secondary" @onclick="CopyCodeAsync">@L["CopyJoinCode"]</button>
+            </div>
+            <div class="lobby-count text-slate-600">@_lobby.Players.Count/@_lobby.Capacity @L["PlayersJoined"]</div>
+
+            @if (IsHost && _lobby.Status == LobbyStatus.Open)
+            {
+                <button class="btn-secondary text-lg" @onclick="OpenOptions" aria-label="@L["OptionsHeading"]">⚙</button>
+            }
+        </header>
+
+        @if (_lobby.Status == LobbyStatus.InProgress)
+        {
+            <p class="rounded-md bg-slate-100 p-3 text-slate-700">@L["GameInProgress"]</p>
+        }
+        else if (_lobby.Status == LobbyStatus.Paused)
+        {
+            <p role="alert" class="rounded-md bg-amber-100 p-3 text-amber-900">@L["GamePaused"]</p>
+        }
+
+        @if (_optionsOpen && IsHost && _lobby.Status == LobbyStatus.Open && _draft is not null)
+        {
+            <section class="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="text-lg font-semibold">@L["OptionsHeading"]</h2>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex flex-col gap-1 text-sm">
+                        @L["MapLabel"]
+                        <select class="field" @bind="_draft.MapId">
+                            <option value="10x10">10x10</option>
+                            <option value="15x15">15x15</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-sm">
+                        @L["ModeLabel"]
+                        <select class="field" @bind="_draft.Mode">
+                            <option value="@GameMode.Hunt">Hunt</option>
+                            <option value="@GameMode.SuddenDeath">Sudden Death</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-sm">
+                        @L["PacingLabel"]
+                        <select class="field" @bind="_draft.Pacing">
+                            <option value="@PacingMode.RealTime">Real Time</option>
+                            <option value="@PacingMode.TurnByTurn">Turn by Turn</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-sm">
+                        @L["RedTeamSizeLabel"]
+                        <select class="field" @bind="_draft.RedTeamSize">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </label>
+
+                    <label class="flex flex-col gap-1 text-sm">
+                        @L["BlueTeamSizeLabel"]
+                        <select class="field" @bind="_draft.BlueTeamSize">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-2 text-sm">
+                    <label class="flex items-center gap-2"><input type="checkbox" @bind="_draft.RadioRelayEnabled" /> @L["RadioRelayLabel"]</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" @bind="_draft.MandatoryDamageReportEnabled" /> @L["MandatoryDamageReportLabel"]</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" @bind="_draft.AutomaticDamageVerification" /> @L["AutomaticDamageVerificationLabel"]</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" @bind="_draft.TraditionalRepairGame" /> @L["TraditionalRepairGameLabel"]</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" @bind="_draft.PauseOnDisconnect" /> @L["PauseOnDisconnectLabel"]</label>
+                </div>
+
+                <button class="btn-primary" @onclick="SaveOptions">@L["SaveOptions"]</button>
+            </section>
+        }
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <TeamPanel Roster="_lobby.Red" Lobby="_lobby" PlayerId="_playerId ?? string.Empty" AccentClass="border-red-300 bg-red-50"
+                       OnJoin="role => ClaimRole(TeamColor.Red, role)" OnRename="name => RenameSubmarine(TeamColor.Red, name)" />
+            <TeamPanel Roster="_lobby.Blue" Lobby="_lobby" PlayerId="_playerId ?? string.Empty" AccentClass="border-blue-300 bg-blue-50"
+                       OnJoin="role => ClaimRole(TeamColor.Blue, role)" OnRename="name => RenameSubmarine(TeamColor.Blue, name)" />
+        </div>
+
+        @if (_lobby.Status == LobbyStatus.Open)
+        {
+            <footer class="flex items-center gap-3">
+                <button class="btn-secondary" @onclick="ToggleReady" disabled="@(_mySeatRoster is null)">@(AmReady ? L["Unready"] : L["Ready"])</button>
+                @if (IsHost)
+                {
+                    <button class="btn-primary" @onclick="StartGame" disabled="@(!CanStart)">@L["StartGame"]</button>
+                }
+            </footer>
+        }
+        else if (IsHost)
+        {
+            <footer class="flex items-center gap-3">
+                @if (_lobby.Status == LobbyStatus.InProgress)
+                {
+                    <button class="btn-secondary" @onclick="Pause">@L["PauseButton"]</button>
+                }
+                else if (_lobby.Status == LobbyStatus.Paused && _lobby.PauseReason == PauseReason.Host)
+                {
+                    <button class="btn-secondary" @onclick="Resume">@L["ResumeButton"]</button>
+                }
+                <button class="btn-secondary" @onclick="RestartToLobby">@L["RestartButton"]</button>
+            </footer>
+        }
+
+        @if (_error is not null)
+        {
+            <p role="alert" class="rounded-md bg-red-100 p-3 text-red-800">@_error</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Code { get; set; } = "";
+
+    private CommanderPeriscope.Lobby.Lobby? _lobby;
+    private string? _playerId;
+    private bool _codeVisible;
+    private bool _optionsOpen;
+    private OptionsDraft? _draft;
+    private string? _error;
+
+    private bool IsHost => _lobby is not null && _playerId == _lobby.HostPlayerId;
+    private TeamRoster? _mySeatRoster => _lobby?.RosterOf(_playerId ?? "");
+    private bool AmReady => _mySeatRoster is not null && _playerId is not null && _mySeatRoster.IsReady(_playerId);
+    private bool CanStart => _lobby is { Status: LobbyStatus.Open } && _lobby.Red.AllActiveRolesClaimedAndReady() && _lobby.Blue.AllActiveRolesClaimedAndReady();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _playerId = await PlayerIdentity.GetOrCreatePlayerIdAsync();
+
+        var lobby = LobbyService.TryGet(Code);
+        if (lobby is not null && !lobby.Players.ContainsKey(_playerId))
+        {
+            LobbyService.Join(Code, _playerId, "Player");
+        }
+
+        CircuitContext.SetPlayer(Code, _playerId);
+        LobbyService.LobbyChanged += OnLobbyChanged;
+        _lobby = LobbyService.TryGet(Code);
+    }
+
+    private void OnLobbyChanged(string code)
+    {
+        if (code != Code)
+        {
+            return;
+        }
+
+        _lobby = LobbyService.TryGet(Code);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CopyCodeAsync() => await JS.InvokeVoidAsync("commanderPeriscope.copyToClipboard", _lobby!.Code);
+
+    private void ClaimRole(TeamColor team, CrewRole role) => Guard(() => LobbyService.ClaimRole(Code, _playerId!, team, role));
+
+    private void RenameSubmarine(TeamColor team, string name) => Guard(() => LobbyService.RenameSubmarine(Code, _playerId!, team, name));
+
+    private void ToggleReady() => Guard(() => LobbyService.SetReady(Code, _playerId!, !AmReady));
+
+    private void OpenOptions()
+    {
+        var options = _lobby!.Options;
+        _draft = new OptionsDraft
+        {
+            MapId = options.MapId,
+            Mode = options.Mode,
+            Pacing = options.Pacing,
+            RedTeamSize = options.RedTeamSize,
+            BlueTeamSize = options.BlueTeamSize,
+            RadioRelayEnabled = options.RadioRelayEnabled,
+            MandatoryDamageReportEnabled = options.MandatoryDamageReportEnabled,
+            AutomaticDamageVerification = options.AutomaticDamageVerification,
+            TraditionalRepairGame = options.TraditionalRepairGame,
+            PauseOnDisconnect = options.PauseOnDisconnect,
+        };
+        _optionsOpen = true;
+    }
+
+    private void SaveOptions() => Guard(() =>
+    {
+        LobbyService.UpdateOptions(Code, _playerId!, new LobbyOptions
+        {
+            MapId = _draft!.MapId,
+            Mode = _draft.Mode,
+            Pacing = _draft.Pacing,
+            RedTeamSize = _draft.RedTeamSize,
+            BlueTeamSize = _draft.BlueTeamSize,
+            RadioRelayEnabled = _draft.RadioRelayEnabled,
+            MandatoryDamageReportEnabled = _draft.MandatoryDamageReportEnabled,
+            AutomaticDamageVerification = _draft.AutomaticDamageVerification,
+            TraditionalRepairGame = _draft.TraditionalRepairGame,
+            PauseOnDisconnect = _draft.PauseOnDisconnect,
+        });
+        _optionsOpen = false;
+    });
+
+    private void StartGame() => Guard(() => LobbyService.StartGame(Code, _playerId!));
+
+    private void Pause() => Guard(() => LobbyService.Pause(Code, _playerId!));
+
+    private void Resume() => Guard(() => LobbyService.Resume(Code, _playerId!));
+
+    private void RestartToLobby() => Guard(() => LobbyService.RestartToLobby(Code, _playerId!));
+
+    private void Guard(Action action)
+    {
+        try
+        {
+            action();
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    public void Dispose() => LobbyService.LobbyChanged -= OnLobbyChanged;
+
+    private sealed class OptionsDraft
+    {
+        public string MapId { get; set; } = "10x10";
+        public GameMode Mode { get; set; } = GameMode.Hunt;
+        public PacingMode Pacing { get; set; } = PacingMode.RealTime;
+        public int RedTeamSize { get; set; } = 4;
+        public int BlueTeamSize { get; set; } = 4;
+        public bool RadioRelayEnabled { get; set; }
+        public bool MandatoryDamageReportEnabled { get; set; }
+        public bool AutomaticDamageVerification { get; set; }
+        public bool TraditionalRepairGame { get; set; } = true;
+        public bool PauseOnDisconnect { get; set; } = true;
+    }
+}

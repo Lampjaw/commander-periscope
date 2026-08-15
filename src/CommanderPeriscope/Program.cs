@@ -1,5 +1,8 @@
 using CommanderPeriscope;
 using CommanderPeriscope.Components;
+using CommanderPeriscope.Lobby;
+using CommanderPeriscope.Session;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Serilog;
 using Serilog.Formatting.Compact;
 
@@ -14,6 +17,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddLocalizationSupport();
+
+builder.Services.AddSingleton<ILobbyRepository, InMemoryLobbyRepository>();
+builder.Services.AddSingleton<LobbyService>();
+builder.Services.AddScoped<PlayerIdentityService>();
+builder.Services.AddScoped<CircuitPlayerContext>();
+builder.Services.AddScoped<CircuitHandler, LobbyCircuitHandler>();
 
 var app = builder.Build();
 
