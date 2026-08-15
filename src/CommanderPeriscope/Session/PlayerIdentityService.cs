@@ -3,9 +3,9 @@ using Microsoft.JSInterop;
 namespace CommanderPeriscope.Session;
 
 /// <summary>
-/// The browser-local player token described in the design doc: no accounts, a client-generated id persisted
-/// in localStorage so a refresh or reconnect re-attaches to the same seat. Scoped per circuit, cached after
-/// the first lookup so repeated calls in the same session don't round-trip to JS again.
+/// The browser-local player token: no accounts, a client-generated id persisted in localStorage so a refresh
+/// or reconnect re-attaches to the same seat. Scoped per circuit, cached after the first lookup so repeated
+/// calls in the same session don't round-trip to JS again.
 /// </summary>
 public sealed class PlayerIdentityService(IJSRuntime js)
 {

@@ -157,7 +157,7 @@ public sealed class LobbyService(ILobbyRepository repository)
                 throw new InvalidOperationException("Every claimed role on both teams must be ready before starting.");
             }
 
-            // Any connected-but-unassigned player never got a seat — they're dropped from the session (§6).
+            // Any connected-but-unassigned player never got a seat — they're dropped from the session.
             var seated = lobby.Red.DistinctPlayerIds.Concat(lobby.Blue.DistinctPlayerIds).ToHashSet();
             foreach (var playerId in lobby.Players.Keys.Where(id => !seated.Contains(id)).ToList())
             {
@@ -215,7 +215,7 @@ public sealed class LobbyService(ILobbyRepository repository)
         Notify(lobby);
     }
 
-    /// <summary>Host-only Restart, and the end-of-game Rematch, are the same operation: same code, same roster, fresh game state, ready reset (§5/§6).</summary>
+    /// <summary>Host-only Restart, and the end-of-game Rematch, are the same operation: same code, same roster, fresh game state, ready reset.</summary>
     public void RestartToLobby(string code, string hostPlayerId)
     {
         var lobby = Require(code);

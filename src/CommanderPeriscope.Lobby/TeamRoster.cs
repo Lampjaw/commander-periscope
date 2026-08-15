@@ -41,7 +41,7 @@ public sealed class TeamRoster(TeamColor color)
 
     /// <summary>
     /// Which role a disconnected role's duties fall back to when "Pause on Player Disconnect" is off — reusing
-    /// the exact same target the under-crewed-team groupings already use for that role (§2.2), just applied
+    /// the exact same target the under-crewed-team groupings already use for that role, just applied
     /// per-role instead of scaling the whole team down (which would wrongly also reassign a still-connected
     /// teammate's role). Radio Operator and Captain have no fallback: nobody else absorbs them.
     /// </summary>

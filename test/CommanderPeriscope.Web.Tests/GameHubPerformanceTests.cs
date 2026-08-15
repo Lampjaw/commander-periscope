@@ -9,12 +9,12 @@ using LobbySession = CommanderPeriscope.Lobby.Lobby;
 namespace CommanderPeriscope.Web.Tests;
 
 /// <summary>
-/// Phase 8 performance/latency check: a full 8-client game (4 players per team, every role independently
-/// staffed) is the maximum fan-out this app is designed for (§7.3: single-instance, no horizontal scaling).
-/// These aren't tight micro-benchmarks — timing over a real in-process TestServer plus real SignalR framing
-/// is inherently noisy — but a generous upper bound still catches the failure mode that actually matters
-/// here: an accidental O(n²) broadcast, a blocking call inside the fan-out loop, or a deadlock, any of which
-/// would blow past even a loose bound by an order of magnitude.
+/// Performance/latency check: a full 8-client game (4 players per team, every role independently staffed) is
+/// the maximum fan-out this app is designed for (single-instance, no horizontal scaling). These aren't tight
+/// micro-benchmarks — timing over a real in-process TestServer plus real SignalR framing is inherently noisy —
+/// but a generous upper bound still catches the failure mode that actually matters here: an accidental O(n²)
+/// broadcast, a blocking call inside the fan-out loop, or a deadlock, any of which would blow past even a
+/// loose bound by an order of magnitude.
 /// </summary>
 public class GameHubPerformanceTests : IAsyncLifetime
 {

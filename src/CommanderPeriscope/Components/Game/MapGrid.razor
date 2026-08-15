@@ -1,7 +1,7 @@
-@* Shared read-only map rendering primitive (design-doc §3.1.1): dot grid over water/land, column letters (A, B, C…)
-   along the top, row numbers (1, 2, 3…) down the left, and white sector border lines + sector numbers. Reused
-   by the Captain and Radio Operator screens (Phase 6), which layer own-team trail/position/mine overlays and
-   interactive click targets on top via the parameters below.
+@* Shared map rendering primitive: dot grid over water/land, column letters (A, B, C…) along the top, row
+   numbers (1, 2, 3…) down the left, and white sector border lines + sector numbers. Reused by the Captain and
+   Radio Operator screens, which layer own-team trail/position/mine overlays and interactive click targets on
+   top via the parameters below.
 
    Built as a raw markup string rather than element-by-element Razor markup: Razor's compiler reserves the
    literal tag name "text" (used internally for the @@text: pseudo-element) and refuses attributes on any

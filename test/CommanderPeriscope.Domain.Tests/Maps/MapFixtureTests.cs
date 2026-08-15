@@ -124,7 +124,7 @@ public class MapFixtureTests
             }
         }
 
-        // "Mostly sea" per the design doc — water should heavily dominate the small scattered islands.
+        // "Mostly sea" — water should heavily dominate the small scattered islands.
         Assert.True(waterCount > expectedSize * expectedSize * 0.8);
     }
 }

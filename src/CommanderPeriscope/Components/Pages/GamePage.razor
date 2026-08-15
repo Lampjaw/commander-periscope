@@ -125,7 +125,7 @@ else
     private string OwnTeamName => (MyColor == TeamColor.Blue ? _lobby?.Blue.SubmarineName : _lobby?.Red.SubmarineName) ?? "";
     private string EnemyTeamName => (MyColor == TeamColor.Blue ? _lobby?.Red.SubmarineName : _lobby?.Blue.SubmarineName) ?? "";
 
-    /// <summary>Every nominal role this player controls — more than one on an under-crewed team, per the role-doubling rules (§2.2).</summary>
+    /// <summary>Every nominal role this player controls — more than one on an under-crewed team, per the role-doubling rules.</summary>
     private List<CrewRole> MyRoles
     {
         get

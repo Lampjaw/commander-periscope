@@ -19,7 +19,7 @@
     @apply rounded-md border border-slate-300 bg-white px-2 py-1 text-sm;
   }
 
-  // --- §3.7 Persistent status bars ---
+  // --- Persistent status bars ---
 
   .status-bar {
     @apply flex items-center gap-3 rounded-md px-4 py-2 text-white;
@@ -88,7 +88,7 @@
     top: 10px;
   }
 
-  // --- §3.8 Toast feed + pause overlay ---
+  // --- Toast feed + pause overlay ---
 
   .toast-feed {
     @apply flex flex-col gap-1;
@@ -104,7 +104,7 @@
     @apply pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 text-lg font-semibold text-white;
   }
 
-  // --- §3.1.1 Map grid ---
+  // --- Map grid ---
 
   .map-grid-wrap {
     @apply flex justify-center rounded-lg bg-slate-900 p-4;
@@ -171,7 +171,7 @@
     stroke-width: 1.5;
   }
 
-  // --- §3.6 Radio Operator: sliding overlay + deduction grid ---
+  // --- Radio Operator: sliding overlay + deduction grid ---
 
   .radio-overlay-wrap {
     @apply relative;
@@ -212,7 +212,7 @@
     @apply border-slate-400 bg-slate-300 text-slate-500 line-through;
   }
 
-  // --- §3.4 First Mate: gauges + damage boxes ---
+  // --- First Mate: gauges + damage boxes ---
 
   .gauge-card {
     @apply space-y-2 rounded-md border border-slate-200 bg-white p-3;
@@ -250,7 +250,7 @@
     @apply border-red-600 bg-red-600;
   }
 
-  // --- §3.3 Captain ---
+  // --- Captain ---
 
   .captain-status-row {
     @apply flex flex-wrap items-center gap-2;
@@ -280,7 +280,7 @@
     @apply rounded-full border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500;
   }
 
-  // --- §3.9 Surfacing repair panel ---
+  // --- Surfacing repair panel ---
 
   .repair-panel {
     @apply max-h-0 overflow-hidden rounded-lg bg-slate-800 text-white opacity-0;
@@ -329,7 +329,7 @@
     @apply flex items-center gap-3;
   }
 
-  // --- §3.5 Engineer breakdown board ---
+  // --- Engineer breakdown board ---
 
   .breakdown-board {
     @apply grid grid-cols-2 gap-3 md:grid-cols-4;

@@ -12,14 +12,14 @@ namespace CommanderPeriscope.Hubs;
 
 /// <summary>
 /// The real-time transport for an in-progress game: clients send intents, this hub validates them against
-/// the Phase 1 domain engine and role/turn rules, then broadcasts the resulting scoped views via the Phase 2
-/// visibility layer. It never hands out raw <see cref="GameEngine"/> state — every outbound message goes
+/// the domain engine and role/turn rules, then broadcasts the resulting scoped views via the visibility
+/// layer. It never hands out raw <see cref="GameEngine"/> state — every outbound message goes
 /// through <see cref="ScopedBroadcastPlanner"/> first.
 ///
-/// The pre-game lobby (Phase 3) deliberately does NOT use this hub — it has no hidden information, so it's
-/// driven by plain injected services and Blazor Server's own circuit. This hub exists specifically because the
-/// game does have hidden information, and SignalR groups are what let the server enforce that structurally
-/// instead of trusting the client to filter what it renders.
+/// The pre-game lobby deliberately does NOT use this hub — it has no hidden information, so it's driven by
+/// plain injected services and Blazor Server's own circuit. This hub exists specifically because the game
+/// does have hidden information, and SignalR groups are what let the server enforce that structurally instead
+/// of trusting the client to filter what it renders.
 /// </summary>
 public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry registry) : Hub
 {

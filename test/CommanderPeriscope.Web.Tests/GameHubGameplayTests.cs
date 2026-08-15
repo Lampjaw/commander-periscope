@@ -157,11 +157,11 @@ public class GameHubGameplayTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Phase 8 anti-cheat audit: a scripted "rogue" listener on the enemy team, sitting through a whole
-    /// sequence of the other team's private actions (move, mine, silence, gauge mark, breakdown mark),
-    /// must never once receive a payload type that could leak the opposing sub's position, trail, mines, or
-    /// breakdown detail — replaying the Phase 2 visibility guarantees against the real hub end-to-end rather
-    /// than the projection layer in isolation.
+    /// Anti-cheat audit: a scripted "rogue" listener on the enemy team, sitting through a whole sequence of
+    /// the other team's private actions (move, mine, silence, gauge mark, breakdown mark), must never once
+    /// receive a payload type that could leak the opposing sub's position, trail, mines, or breakdown detail —
+    /// replaying the visibility guarantees against the real hub end-to-end rather than the projection layer in
+    /// isolation.
     /// </summary>
     [Fact]
     public async Task RogueEnemyListener_NeverReceivesPrivatePayloadsAcrossAFullSequenceOfRedActions()

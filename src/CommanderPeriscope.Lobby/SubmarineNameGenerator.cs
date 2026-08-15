@@ -1,6 +1,6 @@
 namespace CommanderPeriscope.Lobby;
 
-/// <summary>Generates a fierce-sounding default submarine name for a freshly created team (§3.2).</summary>
+/// <summary>Generates a fierce-sounding default submarine name for a freshly created team.</summary>
 public static class SubmarineNameGenerator
 {
     private static readonly string[] Adjectives =

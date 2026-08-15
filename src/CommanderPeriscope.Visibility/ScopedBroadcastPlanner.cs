@@ -117,8 +117,8 @@ public static class ScopedBroadcastPlanner
         engine.IsOver ? [new ScopedBroadcast(GroupNames.AllPlayers(gameId), new GameOverPayload(engine.Result))] : [];
 
     /// <summary>
-    /// Repair-window state. Per §3.9, the Real-Time sliding panel (per-role secured/unsecured progress) is
-    /// "not shown to the opposing team — repair progress is internal bookkeeping" — so while a Real-Time
+    /// Repair-window state. The Real-Time sliding panel (per-role secured/unsecured progress) is not shown to
+    /// the opposing team — repair progress is internal bookkeeping — so while a Real-Time
     /// repair is active, this goes only to the surfacing team's own group. Turn-by-Turn is the opposite: the
     /// enemy team is the one actively spending the bonus actions this view describes, so it's public, same as
     /// an inactive/just-closed session (which carries no secured-role detail either way).
