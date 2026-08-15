@@ -125,10 +125,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
     /// <summary>Both Captains privately mark their starting X before "Dive!" — never broadcast beyond their own Captain group.</summary>
     public async Task SetStartingPosition(string lobbyCode, string playerId, Coordinate start)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (_, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
 
         await ExecuteAsync(lobbyCode, engine,
             mutate: () => engine.SetStartingPosition(roster.Color, start),
@@ -137,10 +134,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task Move(string lobbyCode, string playerId, Direction direction)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -151,10 +145,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task ActivateSilence(string lobbyCode, string playerId, Direction direction, int steps)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -169,10 +160,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task PlaceMine(string lobbyCode, string playerId, Coordinate target)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -188,10 +176,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
     /// <summary>Detonating a placed mine "can happen at any time" per the rules — not gated by whose turn it is.</summary>
     public async Task DetonateMine(string lobbyCode, string playerId, Coordinate mineLocation)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (_, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
 
         MineResult? result = null;
         await ExecuteAsync(lobbyCode, engine,
@@ -207,10 +192,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task FireTorpedo(string lobbyCode, string playerId, Coordinate impact)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
         RequireTurn(lobby, engine, roster.Color);
 
         TorpedoResult? result = null;
@@ -230,10 +212,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
     /// <summary>The First Mate's response to every Captain order: marks one empty box on a gauge of their choice. Not itself an order — doesn't consume a turn.</summary>
     public async Task MarkGauge(string lobbyCode, string playerId, SystemType type)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.FirstMate);
+        var (_, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.FirstMate);
 
         await ExecuteAsync(lobbyCode, engine,
             mutate: () => engine.MarkGauge(roster.Color, type),
@@ -242,10 +221,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task RequestSonar(string lobbyCode, string playerId)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.FirstMate);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.FirstMate);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -256,10 +232,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task RequestDrone(string lobbyCode, string playerId)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.FirstMate);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.FirstMate);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -271,10 +244,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
     /// <summary>Addresses a breakdown item by its fixed position in the Engineer's board — that list never reorders or resizes.</summary>
     public async Task MarkBreakdown(string lobbyCode, string playerId, int breakdownIndex)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Engineer);
+        var (_, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Engineer);
 
         var breakdowns = engine.SubFor(roster.Color).Engineer.Breakdowns;
         if (breakdownIndex < 0 || breakdownIndex >= breakdowns.Count)
@@ -295,10 +265,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task Surface(string lobbyCode, string playerId)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, CrewRole.Captain);
+        var (lobby, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, CrewRole.Captain);
         RequireTurn(lobby, engine, roster.Color);
 
         await ExecuteAsync(lobbyCode, engine,
@@ -315,10 +282,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task SecureRealTimeRepairSection(string lobbyCode, string playerId, CrewRole role)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
-        RequireRole(lobby, roster, playerId, role);
+        var (_, engine, roster) = RequireAuthorizedAction(lobbyCode, playerId, role);
 
         await ExecuteAsync(lobbyCode, engine,
             mutate: () => engine.SecureRealTimeRepairSection(roster.Color, role),
@@ -329,9 +293,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     public async Task ConsumeTurnByTurnBonusAction(string lobbyCode, string playerId)
     {
-        var lobby = RequireLobby(lobbyCode);
-        var engine = RequireActiveGame(lobby);
-        var roster = RequireSeat(lobby, playerId);
+        var (lobby, engine, roster) = RequireSeatedPlayer(lobbyCode, playerId);
 
         var bonusSession = engine.ActiveTurnByTurnSurface ?? throw new HubException("No turn-by-turn bonus round is in progress.");
         if (roster.Color != bonusSession.SurfacingTeam.Opponent())
@@ -389,10 +351,9 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     /// <summary>
     /// Used by every *mutating* hub method (never by <see cref="JoinGame"/>, which must still work while
-    /// paused so a reconnecting player can see paused state). Nothing in this hub checked <see cref="Lobby.Status"/>
-    /// before this — a rogue or just-slow client could keep sending intents while the game was paused
-    /// (manually, or because the opponent disconnected), silently defeating "all timers/turns stop" for the
-    /// other team.
+    /// paused so a reconnecting player can see paused state). Without this check, a rogue or just-slow client
+    /// could keep sending intents while the game was paused (manually, or because the opponent disconnected),
+    /// silently defeating "all timers/turns stop" for the other team.
     /// </summary>
     private static GameEngine RequireActiveGame(LobbySession lobby)
     {
@@ -407,6 +368,23 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
 
     private static TeamRoster RequireSeat(LobbySession lobby, string playerId) =>
         lobby.RosterOf(playerId) ?? throw new HubException("You are not seated in this lobby.");
+
+    /// <summary>The common prelude every mutating hub method needs: an in-progress game and the caller's own seat on it.</summary>
+    private (LobbySession Lobby, GameEngine Engine, TeamRoster Roster) RequireSeatedPlayer(string lobbyCode, string playerId)
+    {
+        var lobby = RequireLobby(lobbyCode);
+        var engine = RequireActiveGame(lobby);
+        var roster = RequireSeat(lobby, playerId);
+        return (lobby, engine, roster);
+    }
+
+    /// <summary>The common prelude for any intent gated to one specific role — everything above <see cref="RequireSeatedPlayer"/>, plus the role check.</summary>
+    private (LobbySession Lobby, GameEngine Engine, TeamRoster Roster) RequireAuthorizedAction(string lobbyCode, string playerId, CrewRole role)
+    {
+        var (lobby, engine, roster) = RequireSeatedPlayer(lobbyCode, playerId);
+        RequireRole(lobby, roster, playerId, role);
+        return (lobby, engine, roster);
+    }
 
     /// <summary>
     /// Accepts the role's real occupant, or — when "Pause on Player Disconnect" is off and that occupant is
