@@ -1,0 +1,70 @@
+@* §3.4: 3-column gauge layout with per-system charge counts, circular "charge" toggle UI, damage-box display,
+   and activate controls for the two systems the First Mate (not the Captain) requests directly. *@
+
+<div class="space-y-4">
+    <div class="grid grid-cols-3 gap-3">
+        @if (View is not null)
+        {
+            @foreach (var gauge in View.Gauges)
+            {
+                <div class="gauge-card">
+                    <div class="gauge-card-header">
+                        <span>@gauge.Type</span>
+                        <span class="gauge-card-count">@gauge.Charge/@gauge.Capacity</span>
+                    </div>
+                    <div class="gauge-dots">
+                        @for (var i = 0; i < gauge.Capacity; i++)
+                        {
+                            var filled = i < gauge.Charge;
+                            var isNextBox = i == gauge.Charge;
+                            <button type="button"
+                                    class="gauge-dot @(filled ? "gauge-dot-filled" : "")"
+                                    disabled="@(!isNextBox)"
+                                    @onclick="() => OnMarkGauge.InvokeAsync(gauge.Type)">
+                            </button>
+                        }
+                    </div>
+                    @if (gauge.Type is SystemType.Sonar or SystemType.Drone)
+                    {
+                        <button class="btn-secondary mt-2 w-full"
+                                disabled="@(!gauge.IsReady)"
+                                @onclick="() => (gauge.Type == SystemType.Sonar ? OnRequestSonar : OnRequestDrone).InvokeAsync()">
+                            @L["ActivateButton"]
+                        </button>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    @if (View is not null)
+    {
+        <div class="gauge-card">
+            <div class="gauge-card-header"><span>@L["DamageLabel"]</span></div>
+            <div class="gauge-dots">
+                @for (var i = 0; i < View.DamageCapacity; i++)
+                {
+                    var hit = i < View.DamageChecked;
+                    <span class="damage-box @(hit ? "damage-box-hit" : "")"></span>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public FirstMateView? View { get; set; }
+
+    [Parameter]
+    public EventCallback<SystemType> OnMarkGauge { get; set; }
+
+    [Parameter]
+    public EventCallback OnRequestSonar { get; set; }
+
+    [Parameter]
+    public EventCallback OnRequestDrone { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+}

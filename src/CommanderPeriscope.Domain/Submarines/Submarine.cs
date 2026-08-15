@@ -25,6 +25,13 @@ public sealed class Submarine(TeamColor team, int damageCapacity)
     /// </summary>
     public bool CanActivateSystem { get; private set; } = true;
 
+    /// <summary>
+    /// "Mandatory Damage Report" only: set after every direction order, cleared the moment the Engineer marks
+    /// any breakdown. While true and the option is on, the Captain's next order is blocked — the Engineer's
+    /// marking action is what unblocks it, per the printed rule.
+    /// </summary>
+    public bool PendingDamageReport { get; private set; }
+
     public void PlaceStartingPosition(Coordinate start)
     {
         if (Position is not null)
@@ -48,6 +55,12 @@ public sealed class Submarine(TeamColor team, int damageCapacity)
         Trail.Add(destination);
         CanActivateSystem = true;
     }
+
+    /// <summary>Called by GameEngine after a direction order when the Mandatory Damage Report option is on.</summary>
+    public void SetPendingDamageReport() => PendingDamageReport = true;
+
+    /// <summary>Called by GameEngine when the Engineer marks a breakdown, lifting the block on the Captain's next order.</summary>
+    public void ClearPendingDamageReport() => PendingDamageReport = false;
 
     public void PlaceMine(Coordinate at) => Mines.Add(at);
 
@@ -85,5 +98,6 @@ public sealed class Submarine(TeamColor team, int damageCapacity)
 
         Engineer.ClearAllBreakdowns();
         Surfaced = false;
+        PendingDamageReport = false;
     }
 }

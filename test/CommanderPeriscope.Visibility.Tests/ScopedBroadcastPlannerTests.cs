@@ -63,7 +63,7 @@ public class ScopedBroadcastPlannerTests
     }
 
     [Fact]
-    public void PlanBreakdownMark_SendsExactlyOneBroadcastToTheMarkingTeamsOwnEngineerGroup()
+    public void PlanBreakdownMark_SendsToTheMarkingTeamsOwnEngineerAndCaptainGroups()
     {
         var engine = GameEngineFactory.Create();
         var symbol = engine.Red.Engineer.Breakdowns[0];
@@ -71,9 +71,9 @@ public class ScopedBroadcastPlannerTests
 
         var broadcasts = ScopedBroadcastPlanner.PlanBreakdownMark(GameId, engine, TeamColor.Red);
 
-        var broadcast = Assert.Single(broadcasts);
-        Assert.Equal(GroupNames.Role(GameId, TeamColor.Red, CrewRole.Engineer), broadcast.Group);
-        Assert.IsType<EngineerView>(broadcast.Payload);
+        Assert.Contains(broadcasts, b => b.Group == GroupNames.Role(GameId, TeamColor.Red, CrewRole.Engineer) && b.Payload is EngineerView);
+        Assert.Contains(broadcasts, b => b.Group == GroupNames.Role(GameId, TeamColor.Red, CrewRole.Captain) && b.Payload is CaptainView);
+        Assert.Equal(2, broadcasts.Count);
     }
 
     [Fact]
@@ -90,7 +90,6 @@ public class ScopedBroadcastPlannerTests
             GroupNames.AllPlayers(GameId),
             GroupNames.Team(GameId, TeamColor.Red),
             GroupNames.Team(GameId, TeamColor.Blue),
-            GroupNames.Role(GameId, TeamColor.Red, CrewRole.Captain),
             GroupNames.Role(GameId, TeamColor.Red, CrewRole.FirstMate),
             GroupNames.Role(GameId, TeamColor.Red, CrewRole.RadioOperator),
             GroupNames.Role(GameId, TeamColor.Blue, CrewRole.Captain),

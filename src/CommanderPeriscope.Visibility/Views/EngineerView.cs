@@ -9,4 +9,4 @@ public sealed record BreakdownItemView(Direction Column, SystemColor? Color, int
 /// What the Engineer's own client sees: the full breakdown board, marks and all. This is the single most
 /// sensitive view in the game — it must never be sent to any group except the owning team's own Engineer.
 /// </summary>
-public sealed record EngineerView(IReadOnlyList<BreakdownItemView> Breakdowns);
+public sealed record EngineerView(IReadOnlyList<BreakdownItemView> Breakdowns, bool PendingDamageReport);

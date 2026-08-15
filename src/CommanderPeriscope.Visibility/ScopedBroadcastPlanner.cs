@@ -32,6 +32,7 @@ public static class ScopedBroadcastPlanner
         var broadcasts = new List<ScopedBroadcast>(PlanStatusBars(gameId, engine))
         {
             new(GroupNames.AllPlayers(gameId), GameStateViews.MapViewFor(engine.Map)),
+            PlanRepairSessionRefresh(gameId, engine),
         };
 
         foreach (var team in new[] { TeamColor.Red, TeamColor.Blue })
@@ -47,15 +48,16 @@ public static class ScopedBroadcastPlanner
     }
 
     /// <summary>
-    /// After a Move intent resolves: refresh the moving team's own Captain view, and — only if Radio Relay is
-    /// enabled — tell the enemy's Radio Operator the heading. Never the position.
+    /// After a Move intent resolves: refresh the moving team's own Captain view (whose PendingDamageReport
+    /// flag may have just been set) and its Engineer (who needs to see the new blocking state appear), and —
+    /// only if Radio Relay is enabled — tell the enemy's Radio Operator the heading. Never the position.
     /// </summary>
     public static IReadOnlyList<ScopedBroadcast> PlanMove(string gameId, GameEngine engine, TeamColor team, Direction heading)
     {
-        var sub = engine.SubFor(team);
         var broadcasts = new List<ScopedBroadcast>
         {
-            new(GroupNames.Role(gameId, team, CrewRole.Captain), GameStateViews.CaptainViewFor(engine, sub)),
+            PlanCaptainRefresh(gameId, engine, team),
+            PlanEngineerRefresh(gameId, engine, team),
         };
 
         if (engine.Options.RadioRelayEnabled)
@@ -67,9 +69,12 @@ public static class ScopedBroadcastPlanner
         return broadcasts;
     }
 
-    /// <summary>After an Engineer marks a breakdown or Reactor slot: refresh only that team's own Engineer group. Nothing else ever sees this.</summary>
+    /// <summary>
+    /// After an Engineer marks a breakdown or Reactor slot: refresh that team's own Engineer group, plus its
+    /// Captain (whose PendingDamageReport flag may have just been cleared by this mark). Nothing else ever sees this.
+    /// </summary>
     public static IReadOnlyList<ScopedBroadcast> PlanBreakdownMark(string gameId, GameEngine engine, TeamColor team) =>
-        [new ScopedBroadcast(GroupNames.Role(gameId, team, CrewRole.Engineer), GameStateViews.EngineerViewFor(engine.SubFor(team)))];
+        [PlanEngineerRefresh(gameId, engine, team), PlanCaptainRefresh(gameId, engine, team)];
 
     /// <summary>After a First Mate marks a gauge: refresh only that team's own First Mate group.</summary>
     public static IReadOnlyList<ScopedBroadcast> PlanGaugeMark(string gameId, GameEngine engine, TeamColor team) =>
@@ -111,10 +116,15 @@ public static class ScopedBroadcastPlanner
     public static IReadOnlyList<ScopedBroadcast> PlanGameOver(string gameId, GameEngine engine) =>
         engine.IsOver ? [new ScopedBroadcast(GroupNames.AllPlayers(gameId), new GameOverPayload(engine.Result))] : [];
 
+    /// <summary>Public repair-window state — a surfaced sub and its timer are already visible/audible at the table, so every player gets this.</summary>
+    public static ScopedBroadcast PlanRepairSessionRefresh(string gameId, GameEngine engine) =>
+        new(GroupNames.AllPlayers(gameId), GameStateViews.RepairSessionViewFor(engine));
+
     /// <summary>
     /// After a repair completes (real-time or turn-by-turn): the trail clears, breakdowns wipe, and the sub
-    /// stops being surfaced — refresh that team's Captain, Engineer, and both teams' public status bars.
+    /// stops being surfaced — refresh that team's Captain, Engineer, both teams' public status bars, and the
+    /// now-closed repair panel.
     /// </summary>
     public static IReadOnlyList<ScopedBroadcast> PlanRepairComplete(string gameId, GameEngine engine, TeamColor team) =>
-        [.. PlanStatusBars(gameId, engine), PlanCaptainRefresh(gameId, engine, team), PlanEngineerRefresh(gameId, engine, team)];
+        [.. PlanStatusBars(gameId, engine), PlanCaptainRefresh(gameId, engine, team), PlanEngineerRefresh(gameId, engine, team), PlanRepairSessionRefresh(gameId, engine)];
 }

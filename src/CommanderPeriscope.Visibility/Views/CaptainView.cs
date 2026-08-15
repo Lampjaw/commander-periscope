@@ -1,4 +1,5 @@
 using CommanderPeriscope.Domain.Maps;
+using CommanderPeriscope.Domain.Systems;
 
 namespace CommanderPeriscope.Visibility.Views;
 
@@ -11,4 +12,7 @@ public sealed record CaptainView(
     int? Sector,
     IReadOnlyList<Coordinate> Trail,
     IReadOnlyList<Coordinate> Mines,
-    bool CanActivateSystem);
+    bool CanActivateSystem,
+    IReadOnlyList<GaugeView> Gauges,
+    IReadOnlyList<SystemColor> BlockedColors,
+    bool PendingDamageReport);

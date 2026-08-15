@@ -1,0 +1,209 @@
+@* §3.3: click-a-dot movement with legality-gated interactivity, path rendering (via MapGrid), mine mode,
+   torpedo targeting, a Silence sequence form, surface command, and a passive damage/status relay from the
+   Engineer (hull integrity + which system colors are blocked, without naming the specific breaker). The
+   Sonar/Drone "voice-prompt" chips are a pure in-app reminder to call the order aloud — no server call. *@
+
+<div class="space-y-4">
+    @if (View is null || Map is null)
+    {
+        <p class="text-sm text-slate-500">@L["LoadingLobby"]</p>
+    }
+    else if (View.Position is null)
+    {
+        <p class="text-sm font-medium text-slate-700">@L["SetStartingPositionPrompt"]</p>
+        <div class="map-grid-wrap">
+            <MapGrid Map="Map" ClickTargets="StartTargets" OnDotClick="c => OnSetStartingPosition.InvokeAsync(c)" />
+        </div>
+    }
+    else
+    {
+        <div class="captain-status-row">
+            <span class="text-sm text-slate-600">@string.Format(L["SectorLabel"], View.Sector)</span>
+            @foreach (var color in View.BlockedColors)
+            {
+                <span class="captain-blocked-chip">@string.Format(L["ColorBlockedChip"], color)</span>
+            }
+        </div>
+
+        @if (View.PendingDamageReport)
+        {
+            <p class="breakdown-pending-banner">@L["PendingDamageReportCaptainBanner"]</p>
+        }
+
+        <div class="captain-mode-tabs">
+            @foreach (var mode in Modes)
+            {
+                <button class="captain-mode-tab @(_mode == mode ? "captain-mode-tab-active" : "")" @onclick="() => _mode = mode">
+                    @L[$"CaptainMode{mode}"]
+                </button>
+            }
+        </div>
+
+        <div class="map-grid-wrap">
+            <MapGrid Map="Map" Trail="View.Trail" Position="View.Position" Mines="View.Mines" ClickTargets="CurrentClickTargets" OnDotClick="HandleDotClick" />
+        </div>
+
+        @if (_mode == CaptainMode.Silence)
+        {
+            <div class="captain-silence-form">
+                <label class="text-sm text-slate-700">@L["SilenceDirectionLabel"]</label>
+                <select class="field" @bind="_silenceDirection">
+                    @foreach (var direction in Enum.GetValues<Direction>())
+                    {
+                        <option value="@direction">@direction</option>
+                    }
+                </select>
+                <label class="text-sm text-slate-700">@L["SilenceStepsLabel"]</label>
+                <input class="field w-16" type="number" min="0" max="4" @bind="_silenceSteps" />
+                <button class="btn-primary" @onclick="LaunchSilence">@L["LaunchSilenceButton"]</button>
+            </div>
+        }
+
+        @if (_mode == CaptainMode.DetonateMine)
+        {
+            <div class="flex flex-wrap gap-2">
+                @foreach (var mine in View.Mines)
+                {
+                    <button class="btn-secondary" @onclick="() => OnDetonateMine.InvokeAsync(mine)">@mine</button>
+                }
+                @if (View.Mines.Count == 0)
+                {
+                    <p class="text-sm text-slate-500">@L["NoMinesPlaced"]</p>
+                }
+            </div>
+        }
+
+        <div class="flex items-center justify-between">
+            <div class="flex gap-2">
+                <span class="voice-prompt-chip">@L["VoicePromptSonar"]</span>
+                <span class="voice-prompt-chip">@L["VoicePromptDrone"]</span>
+            </div>
+            <button class="btn-primary" @onclick="() => OnSurface.InvokeAsync()">@L["SurfaceButton"]</button>
+        </div>
+    }
+</div>
+
+@code {
+    private enum CaptainMode { Move, Mine, Torpedo, Silence, DetonateMine }
+
+    private static readonly CaptainMode[] Modes = Enum.GetValues<CaptainMode>();
+
+    [Parameter]
+    public CaptainView? View { get; set; }
+
+    [Parameter]
+    public MapView? Map { get; set; }
+
+    [Parameter]
+    public EventCallback<Coordinate> OnSetStartingPosition { get; set; }
+
+    [Parameter]
+    public EventCallback<Direction> OnMove { get; set; }
+
+    [Parameter]
+    public EventCallback<Coordinate> OnPlaceMine { get; set; }
+
+    [Parameter]
+    public EventCallback<Coordinate> OnDetonateMine { get; set; }
+
+    [Parameter]
+    public EventCallback<Coordinate> OnFireTorpedo { get; set; }
+
+    [Parameter]
+    public EventCallback<(Direction Direction, int Steps)> OnActivateSilence { get; set; }
+
+    [Parameter]
+    public EventCallback OnSurface { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private CaptainMode _mode = CaptainMode.Move;
+    private Direction _silenceDirection;
+    private int _silenceSteps;
+
+    private HashSet<Coordinate> Land => Map is null ? [] : [.. Map.LandCells];
+
+    private List<Coordinate> StartTargets =>
+        Map is null ? [] : Enumerable.Range(0, Map.Size)
+            .SelectMany(row => Enumerable.Range(0, Map.Size).Select(col => new Coordinate(col, row)))
+            .Where(c => !Land.Contains(c))
+            .ToList();
+
+    private Dictionary<Coordinate, Direction> AdjacentTargets
+    {
+        get
+        {
+            var result = new Dictionary<Coordinate, Direction>();
+            if (View?.Position is not { } position)
+            {
+                return result;
+            }
+
+            foreach (var direction in Enum.GetValues<Direction>())
+            {
+                var candidate = GameMap.Step(position, direction);
+                if (!Land.Contains(candidate) && InBounds(candidate) && !View.Trail.Contains(candidate))
+                {
+                    result[candidate] = direction;
+                }
+            }
+
+            return result;
+        }
+    }
+
+    private bool InBounds(Coordinate c) => Map is not null && c.Col >= 0 && c.Col < Map.Size && c.Row >= 0 && c.Row < Map.Size;
+
+    private List<Coordinate> CurrentClickTargets => _mode switch
+    {
+        CaptainMode.Move => [.. AdjacentTargets.Keys],
+        CaptainMode.Mine => [.. AdjacentTargets.Keys],
+        CaptainMode.Torpedo => TorpedoTargets,
+        _ => [],
+    };
+
+    private List<Coordinate> TorpedoTargets
+    {
+        get
+        {
+            if (View?.Position is not { } position || Map is null)
+            {
+                return [];
+            }
+
+            var targets = new List<Coordinate>();
+            for (var row = 0; row < Map.Size; row++)
+            {
+                for (var col = 0; col < Map.Size; col++)
+                {
+                    var candidate = new Coordinate(col, row);
+                    if (!Land.Contains(candidate) && GameMap.ManhattanDistance(position, candidate) <= 4)
+                    {
+                        targets.Add(candidate);
+                    }
+                }
+            }
+
+            return targets;
+        }
+    }
+
+    private async Task HandleDotClick(Coordinate coordinate)
+    {
+        switch (_mode)
+        {
+            case CaptainMode.Move when AdjacentTargets.TryGetValue(coordinate, out var direction):
+                await OnMove.InvokeAsync(direction);
+                break;
+            case CaptainMode.Mine when AdjacentTargets.ContainsKey(coordinate):
+                await OnPlaceMine.InvokeAsync(coordinate);
+                break;
+            case CaptainMode.Torpedo:
+                await OnFireTorpedo.InvokeAsync(coordinate);
+                break;
+        }
+    }
+
+    private async Task LaunchSilence() => await OnActivateSilence.InvokeAsync((_silenceDirection, _silenceSteps));
+}

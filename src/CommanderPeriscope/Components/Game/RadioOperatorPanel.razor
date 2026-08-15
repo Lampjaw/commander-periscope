@@ -1,0 +1,107 @@
+@* §3.6: sliding overlay grid (a client-local render offset over the shared MapGrid — never sent to the server,
+   per the design note: hold Shift and drag to reposition) and a full-map deduction grid the Radio Operator
+   marks up privately while listening for the enemy's spoken heading calls. Entirely client-side state: nothing
+   here is shared game state, so none of it goes through the hub. *@
+
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="space-y-4">
+    <div class="radio-overlay-wrap">
+        <div class="map-grid-wrap">
+            <MapGrid Map="Map" />
+        </div>
+        <div @ref="_overlayRef" class="radio-overlay-grid"></div>
+    </div>
+
+    <div class="flex items-center justify-between">
+        <p class="text-xs text-slate-500">@L["RepositionOverlayHint"]</p>
+        <button class="btn-secondary" @onclick="ResetOverlay">@L["ResetOverlay"]</button>
+    </div>
+
+    @if (Map is not null)
+    {
+        var sectorsPerSide = Map.Size / GameMap.SectorSize;
+        <div class="deduction-grid deduction-grid-@sectorsPerSide">
+            @for (var i = 1; i <= sectorsPerSide * sectorsPerSide; i++)
+            {
+                var sector = i;
+                var excluded = _excludedSectors.Contains(sector);
+                <button type="button" class="deduction-cell @(excluded ? "deduction-cell-excluded" : "")" @onclick="() => ToggleSector(sector)">
+                    @sector
+                </button>
+            }
+        </div>
+    }
+
+    <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700" for="radio-notes">@L["NotesLabel"]</label>
+        <textarea id="radio-notes" class="field h-24 w-full" @bind="_notes" @bind:event="oninput"></textarea>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MapView? Map { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private readonly HashSet<int> _excludedSectors = [];
+    private string _notes = "";
+    private ElementReference _overlayRef;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _dragHandle;
+    private bool _attached;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Map is not null && !_attached)
+        {
+            _attached = true;
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Game/RadioOperatorPanel.razor.js");
+            _dragHandle = await _module.InvokeAsync<IJSObjectReference>("attachOverlayDrag", _overlayRef, "Shift");
+        }
+    }
+
+    private void ToggleSector(int sector)
+    {
+        if (!_excludedSectors.Add(sector))
+        {
+            _excludedSectors.Remove(sector);
+        }
+    }
+
+    private async Task ResetOverlay()
+    {
+        if (_dragHandle is not null)
+        {
+            await _dragHandle.InvokeVoidAsync("reset");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dragHandle is not null)
+        {
+            try
+            {
+                await _dragHandle.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

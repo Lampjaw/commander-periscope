@@ -1,0 +1,56 @@
+@* §3.5: 4-column breakdown board (one column per compass direction) with the uniform-color circuit-linking
+   pattern, a reactor/radiation row, the Mandatory Damage Report blocking-state banner, and repair controls
+   during a surface window (the repair minigame itself lives in RepairPanel, shared across all four roles). *@
+
+<div class="space-y-4">
+    @if (View is not null)
+    {
+        @if (View.PendingDamageReport)
+        {
+            <p class="breakdown-pending-banner">@L["PendingDamageReportBanner"]</p>
+        }
+
+        <div class="breakdown-board">
+            @foreach (var column in Enum.GetValues<Direction>())
+            {
+                <div class="breakdown-column">
+                    <div class="breakdown-column-header">@column</div>
+                    @foreach (var (item, index) in IndexedBreakdowns.Where(pair => pair.Item.Column == column))
+                    {
+                        var colorClass = item.IsRadiation
+                            ? "breakdown-item-radiation"
+                            : item.Color switch
+                            {
+                                SystemColor.Red => "breakdown-item-red",
+                                SystemColor.Yellow => "breakdown-item-yellow",
+                                SystemColor.Green => "breakdown-item-green",
+                                _ => "",
+                            };
+                        var label = item.IsRadiation ? L["RadiationLabel"] : item.Color?.ToString() ?? "";
+
+                        <button type="button"
+                                class="breakdown-item @colorClass @(item.IsMarked ? "breakdown-item-marked" : "")"
+                                disabled="@item.IsMarked"
+                                @onclick="() => OnMarkBreakdown.InvokeAsync(index)">
+                            @label
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EngineerView? View { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnMarkBreakdown { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private IEnumerable<(BreakdownItemView Item, int Index)> IndexedBreakdowns =>
+        (View?.Breakdowns ?? []).Select((item, index) => (item, index));
+}

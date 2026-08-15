@@ -240,7 +240,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
             mutate: () => engine.MarkBreakdown(roster.Color, item),
             planBroadcasts: () =>
             [
-                ScopedBroadcastPlanner.PlanEngineerRefresh(lobbyCode, engine, roster.Color),
+                .. ScopedBroadcastPlanner.PlanBreakdownMark(lobbyCode, engine, roster.Color),
                 .. ScopedBroadcastPlanner.PlanStatusBars(lobbyCode, engine),
             ]);
     }
@@ -260,6 +260,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
             [
                 ScopedBroadcastPlanner.PlanCaptainRefresh(lobbyCode, engine, roster.Color),
                 .. ScopedBroadcastPlanner.PlanSurface(lobbyCode, engine, roster.Color),
+                ScopedBroadcastPlanner.PlanRepairSessionRefresh(lobbyCode, engine),
                 ScopedBroadcastPlanner.PlanToast(lobbyCode, $"{roster.Color} surfaced in sector {engine.SectorFor(engine.SubFor(roster.Color))}."),
             ]);
     }
@@ -275,7 +276,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
             mutate: () => engine.SecureRealTimeRepairSection(roster.Color, role),
             planBroadcasts: () => engine.ActiveRealTimeRepair is null
                 ? ScopedBroadcastPlanner.PlanRepairComplete(lobbyCode, engine, roster.Color)
-                : []);
+                : [ScopedBroadcastPlanner.PlanRepairSessionRefresh(lobbyCode, engine)]);
     }
 
     public async Task ConsumeTurnByTurnBonusAction(string lobbyCode, string playerId)
@@ -305,7 +306,7 @@ public sealed class GameHub(LobbyService lobbyService, GameConnectionRegistry re
             },
             planBroadcasts: () => engine.ActiveTurnByTurnSurface is null
                 ? ScopedBroadcastPlanner.PlanRepairComplete(lobbyCode, engine, surfacingTeam)
-                : []);
+                : [ScopedBroadcastPlanner.PlanRepairSessionRefresh(lobbyCode, engine)]);
     }
 
     private async Task ExecuteAsync(

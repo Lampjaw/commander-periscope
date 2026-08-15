@@ -8,4 +8,4 @@ namespace CommanderPeriscope.Visibility.Views;
 /// color(s) are currently broken and the revealed sector. It never carries position, trail, or mine data —
 /// those stay private even while surfaced.
 /// </summary>
-public sealed record SurfaceRevealPayload(TeamColor SurfacedTeam, int? Sector, IReadOnlySet<SystemColor> BlockedColors);
+public sealed record SurfaceRevealPayload(TeamColor SurfacedTeam, int? Sector, IReadOnlyList<SystemColor> BlockedColors);

@@ -1,14 +1,23 @@
 @* Shared read-only map rendering primitive (design-doc §3.1.1): dot grid over water/land, column letters (A, B, C…)
    along the top, row numbers (1, 2, 3…) down the left, and white sector border lines + sector numbers. Reused
-   as-is by the Captain and Radio Operator screens in Phase 6, which layer interactive click targets on top.
+   by the Captain and Radio Operator screens (Phase 6), which layer own-team trail/position/mine overlays and
+   interactive click targets on top via the parameters below.
 
    Built as a raw markup string rather than element-by-element Razor markup: Razor's compiler reserves the
    literal tag name "text" (used internally for the @@text: pseudo-element) and refuses attributes on any
-   element spelled that way (RZ1023) — which SVG's own <text> element collides with. *@
+   element spelled that way (RZ1023) — which SVG's own <text> element collides with.
+
+   Click handling: rather than attach a Blazor @@onclick to individual dots (impossible for markup injected as
+   raw MarkupString), a single JS listener on the <svg> converts the browser click point into viewBox space via
+   getScreenCTM().inverse() — the standard technique for SVG hit-testing under a scaled, responsive viewBox —
+   and calls back into OnGridClick, which only invokes OnDotClick for coordinates present in ClickTargets. *@
+
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
 @if (Map is not null)
 {
-    <svg class="map-grid" viewBox="0 0 @(Extent + Margin) @(Extent + Margin)" role="img" aria-label="@L["MapGridLabel"]">
+    <svg @ref="_svgRef" class="map-grid" viewBox="0 0 @(Extent + Margin) @(Extent + Margin)" role="img" aria-label="@L["MapGridLabel"]">
         @((MarkupString)BuildSvgBody())
     </svg>
 }
@@ -20,16 +29,62 @@
     [Parameter]
     public MapView? Map { get; set; }
 
+    /// <summary>Own-team trail, in visit order — rendered as a bold connecting line.</summary>
+    [Parameter]
+    public IReadOnlyList<Coordinate> Trail { get; set; } = [];
+
+    /// <summary>Own-team current position — rendered larger than the rest of the grid.</summary>
+    [Parameter]
+    public Coordinate? Position { get; set; }
+
+    /// <summary>Own-team placed mines.</summary>
+    [Parameter]
+    public IReadOnlyList<Coordinate> Mines { get; set; } = [];
+
+    /// <summary>Dots that are currently legal click targets — highlighted, and the only coordinates OnDotClick ever fires for.</summary>
+    [Parameter]
+    public IReadOnlyList<Coordinate> ClickTargets { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<Coordinate> OnDotClick { get; set; }
+
     [Inject]
     private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
+    private ElementReference _svgRef;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<MapGrid>? _selfRef;
+    private bool _attached;
+
     private int Extent => (Map?.Size ?? 0) * Cell;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Map is not null && !_attached)
+        {
+            _attached = true;
+            _selfRef = DotNetObjectReference.Create(this);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Game/MapGrid.razor.js");
+            await _module.InvokeVoidAsync("attachClickHandler", _svgRef, _selfRef, Margin, Cell);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnGridClick(int col, int row)
+    {
+        var coordinate = new Coordinate(col, row);
+        if (ClickTargets.Contains(coordinate))
+        {
+            await OnDotClick.InvokeAsync(coordinate);
+        }
+    }
 
     private string BuildSvgBody()
     {
         var map = Map!;
         var sectorsPerSide = map.Size / GameMap.SectorSize;
         var land = new HashSet<Coordinate>(map.LandCells);
+        var clickable = new HashSet<Coordinate>(ClickTargets);
         var sb = new System.Text.StringBuilder();
 
         sb.Append($"""<rect x="{Margin}" y="{Margin}" width="{Extent}" height="{Extent}" class="map-grid-bg" />""");
@@ -38,12 +93,17 @@
         {
             for (var col = 0; col < map.Size; col++)
             {
+                var coordinate = new Coordinate(col, row);
                 var x = Margin + (col * Cell);
                 var y = Margin + (row * Cell);
 
-                if (land.Contains(new Coordinate(col, row)))
+                if (land.Contains(coordinate))
                 {
                     sb.Append($"""<rect x="{x}" y="{y}" width="{Cell}" height="{Cell}" class="map-grid-land" />""");
+                }
+                else if (clickable.Contains(coordinate))
+                {
+                    sb.Append($"""<circle cx="{x + (Cell / 2)}" cy="{y + (Cell / 2)}" r="6" class="map-grid-target" />""");
                 }
                 else
                 {
@@ -84,6 +144,42 @@
             sb.Append($"""<text x="{Margin - 8}" y="{Margin + (row * Cell) + (Cell / 2) + 4}" class="map-grid-axis-label" text-anchor="end">{row + 1}</text>""");
         }
 
+        if (Trail.Count > 1)
+        {
+            var points = string.Join(" ", Trail.Select(c => $"{Margin + (c.Col * Cell) + (Cell / 2)},{Margin + (c.Row * Cell) + (Cell / 2)}"));
+            sb.Append($"""<polyline points="{points}" class="map-grid-trail" />""");
+        }
+
+        foreach (var mine in Mines)
+        {
+            var cx = Margin + (mine.Col * Cell) + (Cell / 2);
+            var cy = Margin + (mine.Row * Cell) + (Cell / 2);
+            sb.Append($"""<circle cx="{cx}" cy="{cy}" r="7" class="map-grid-mine" />""");
+        }
+
+        if (Position is { } position)
+        {
+            var cx = Margin + (position.Col * Cell) + (Cell / 2);
+            var cy = Margin + (position.Row * Cell) + (Cell / 2);
+            sb.Append($"""<circle cx="{cx}" cy="{cy}" r="8" class="map-grid-position" />""");
+        }
+
         return sb.ToString();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _selfRef?.Dispose();
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already gone — nothing to clean up.
+            }
+        }
     }
 }

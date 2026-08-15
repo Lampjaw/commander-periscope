@@ -41,11 +41,53 @@ else
             }
         </div>
 
-        <div class="map-grid-wrap">
-            <MapGrid Map="_map" />
-        </div>
+        <RepairPanel View="_repair" MyRoles="MyRoles" MyTeam="@(MyColor ?? TeamColor.Red)" TraditionalRepairGame="_lobby.Options.TraditionalRepairGame"
+                     OnSecureSection="SecureRealTimeRepairSectionAsync" OnConsumeBonusAction="ConsumeTurnByTurnBonusActionAsync" />
 
-        <p class="rounded-md bg-slate-100 p-3 text-sm text-slate-600">@L["RoleScreenComingSoon"]</p>
+        @if (MyRoles.Count > 1)
+        {
+            <div class="captain-mode-tabs">
+                @foreach (var role in MyRoles)
+                {
+                    <button class="captain-mode-tab @(_activeRole == role ? "captain-mode-tab-active" : "")" @onclick="() => _activeRole = role">
+                        @role
+                    </button>
+                }
+            </div>
+        }
+
+        @if (_activeRole is not CrewRole.Captain and not CrewRole.RadioOperator)
+        {
+            <div class="map-grid-wrap">
+                <MapGrid Map="_map" />
+            </div>
+        }
+
+        @switch (_activeRole)
+        {
+            case CrewRole.Captain:
+                <CaptainPanel View="_captain" Map="_map"
+                              OnSetStartingPosition="SetStartingPositionAsync"
+                              OnMove="MoveAsync"
+                              OnPlaceMine="PlaceMineAsync"
+                              OnDetonateMine="DetonateMineAsync"
+                              OnFireTorpedo="FireTorpedoAsync"
+                              OnActivateSilence="ActivateSilenceAsync"
+                              OnSurface="SurfaceAsync" />
+                break;
+            case CrewRole.FirstMate:
+                <FirstMatePanel View="_firstMate" OnMarkGauge="MarkGaugeAsync" OnRequestSonar="RequestSonarAsync" OnRequestDrone="RequestDroneAsync" />
+                break;
+            case CrewRole.Engineer:
+                <EngineerPanel View="_engineer" OnMarkBreakdown="MarkBreakdownAsync" />
+                break;
+            case CrewRole.RadioOperator:
+                <RadioOperatorPanel Map="_map" />
+                break;
+            default:
+                <p class="rounded-md bg-slate-100 p-3 text-sm text-slate-600">@L["RoleScreenComingSoon"]</p>
+                break;
+        }
 
         @if (_error is not null)
         {
@@ -75,12 +117,29 @@ else
     private readonly List<string> _toasts = [];
     private string? _error;
 
+    private CaptainView? _captain;
+    private FirstMateView? _firstMate;
+    private EngineerView? _engineer;
+    private RadioOperatorView? _radioOperator;
+    private RepairSessionView? _repair;
+    private CrewRole? _activeRole;
+
     private bool IsHost => _lobby is not null && _playerId == _lobby.HostPlayerId;
     private TeamColor? MyColor => _lobby?.RosterOf(_playerId ?? "")?.Color;
     private StatusBarView? OwnBar => MyColor == TeamColor.Blue ? _blueBar : _redBar;
     private StatusBarView? EnemyBar => MyColor == TeamColor.Blue ? _redBar : _blueBar;
     private string OwnTeamName => (MyColor == TeamColor.Blue ? _lobby?.Blue.SubmarineName : _lobby?.Red.SubmarineName) ?? "";
     private string EnemyTeamName => (MyColor == TeamColor.Blue ? _lobby?.Red.SubmarineName : _lobby?.Blue.SubmarineName) ?? "";
+
+    /// <summary>Every nominal role this player controls — more than one on an under-crewed team, per the role-doubling rules (§2.2).</summary>
+    private List<CrewRole> MyRoles
+    {
+        get
+        {
+            var roster = _lobby?.RosterOf(_playerId ?? "");
+            return roster is null ? [] : Enum.GetValues<CrewRole>().Where(role => roster.OccupantOf(role) == _playerId).ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,6 +193,21 @@ else
                 }
 
                 break;
+            case nameof(CaptainView):
+                _captain = json.Deserialize<CaptainView>(JsonOptions);
+                break;
+            case nameof(FirstMateView):
+                _firstMate = json.Deserialize<FirstMateView>(JsonOptions);
+                break;
+            case nameof(EngineerView):
+                _engineer = json.Deserialize<EngineerView>(JsonOptions);
+                break;
+            case nameof(RadioOperatorView):
+                _radioOperator = json.Deserialize<RadioOperatorView>(JsonOptions);
+                break;
+            case nameof(RepairSessionView):
+                _repair = json.Deserialize<RepairSessionView>(JsonOptions);
+                break;
             case nameof(GameToastPayload):
                 _toasts.Add(json.Deserialize<GameToastPayload>(JsonOptions)!.Message);
                 break;
@@ -146,6 +220,7 @@ else
                 break;
         }
 
+        _activeRole ??= MyRoles.FirstOrDefault();
         InvokeAsync(StateHasChanged);
     }
 
@@ -184,6 +259,50 @@ else
         try
         {
             action();
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private Task SetStartingPositionAsync(Coordinate c) => InvokeGameAsync("SetStartingPosition", c);
+
+    private Task MoveAsync(Direction direction) => InvokeGameAsync("Move", direction);
+
+    private Task PlaceMineAsync(Coordinate c) => InvokeGameAsync("PlaceMine", c);
+
+    private Task DetonateMineAsync(Coordinate c) => InvokeGameAsync("DetonateMine", c);
+
+    private Task FireTorpedoAsync(Coordinate c) => InvokeGameAsync("FireTorpedo", c);
+
+    private Task ActivateSilenceAsync((Direction Direction, int Steps) order) => InvokeGameAsync("ActivateSilence", order.Direction, order.Steps);
+
+    private Task SurfaceAsync() => InvokeGameAsync("Surface");
+
+    private Task MarkGaugeAsync(SystemType type) => InvokeGameAsync("MarkGauge", type);
+
+    private Task RequestSonarAsync() => InvokeGameAsync("RequestSonar");
+
+    private Task RequestDroneAsync() => InvokeGameAsync("RequestDrone");
+
+    private Task MarkBreakdownAsync(int breakdownIndex) => InvokeGameAsync("MarkBreakdown", breakdownIndex);
+
+    private Task SecureRealTimeRepairSectionAsync(CrewRole role) => InvokeGameAsync("SecureRealTimeRepairSection", role);
+
+    private Task ConsumeTurnByTurnBonusActionAsync() => InvokeGameAsync("ConsumeTurnByTurnBonusAction");
+
+    private async Task InvokeGameAsync(string method, params object?[] args)
+    {
+        if (_hub is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _hub.InvokeCoreAsync(method, typeof(object), [Code, _playerId, .. args]);
             _error = null;
         }
         catch (Exception ex)

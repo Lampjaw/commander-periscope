@@ -1,0 +1,110 @@
+@* §3.9: sliding repair panel with per-role indicator lights (Real-Time pacing) or the bonus-action counter
+   (Turn-by-Turn pacing), shown while a repair window is open. Real-Time offers each of the current player's
+   own roles a tiny minigame — node-tap (three taps in sequence) or freehand-trace (one long drag) depending
+   on the "Traditional Repair Game" option — that completes by calling back to secure that role's section. *@
+
+<div class="repair-panel @(View is { Active: true } ? "repair-panel-open" : "")">
+    @if (View is { Active: true })
+    {
+        <div class="repair-panel-header">
+            <span>@string.Format(L["RepairInProgressFor"], View.SurfacingTeam)</span>
+        </div>
+
+        @if (View.RealTime)
+        {
+            <div class="repair-lights">
+                @foreach (var role in Enum.GetValues<CrewRole>())
+                {
+                    var secured = View.SecuredRoles.Contains(role);
+                    <div class="repair-light-slot">
+                        <span class="repair-light @(secured ? "repair-light-on" : "")"></span>
+                        <span class="text-xs text-slate-600">@role</span>
+                    </div>
+                }
+            </div>
+
+            <div class="repair-minigames">
+                @foreach (var role in MyRoles.Where(r => !View.SecuredRoles.Contains(r)))
+                {
+                    <div class="repair-minigame">
+                        <span class="text-xs font-medium text-slate-600">@role</span>
+                        @if (TraditionalRepairGame)
+                        {
+                            <button class="btn-secondary" @onclick="() => TapNode(role)">
+                                @L["TapNodeButton"] (@GetTaps(role)/3)
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn-secondary" @onpointerdown="() => BeginTrace(role)" @onpointerup="() => EndTrace(role)">
+                                @L["HoldToTraceButton"]
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="repair-bonus">
+                <span>@string.Format(L["BonusActionsRemaining"], View.BonusActionsRemaining)</span>
+                @if (MyRoles.Contains(CrewRole.Captain) && MyTeam != View.SurfacingTeam)
+                {
+                    <button class="btn-primary" @onclick="() => OnConsumeBonusAction.InvokeAsync()">@L["TakeBonusActionButton"]</button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public RepairSessionView? View { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<CrewRole> MyRoles { get; set; } = [];
+
+    [Parameter]
+    public TeamColor MyTeam { get; set; }
+
+    [Parameter]
+    public bool TraditionalRepairGame { get; set; }
+
+    [Parameter]
+    public EventCallback<CrewRole> OnSecureSection { get; set; }
+
+    [Parameter]
+    public EventCallback OnConsumeBonusAction { get; set; }
+
+    [Inject]
+    private IStringLocalizer<SharedResource> L { get; set; } = default!;
+
+    private readonly Dictionary<CrewRole, int> _taps = [];
+    private readonly HashSet<CrewRole> _tracing = [];
+
+    private int GetTaps(CrewRole role) => _taps.GetValueOrDefault(role);
+
+    private async Task TapNode(CrewRole role)
+    {
+        var taps = GetTaps(role) + 1;
+        if (taps >= 3)
+        {
+            _taps.Remove(role);
+            await OnSecureSection.InvokeAsync(role);
+        }
+        else
+        {
+            _taps[role] = taps;
+        }
+    }
+
+    private void BeginTrace(CrewRole role) => _tracing.Add(role);
+
+    private async Task EndTrace(CrewRole role)
+    {
+        if (_tracing.Remove(role))
+        {
+            await OnSecureSection.InvokeAsync(role);
+        }
+    }
+}

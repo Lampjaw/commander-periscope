@@ -1,3 +1,4 @@
+using CommanderPeriscope.Domain.Common;
 using CommanderPeriscope.Domain.Engineering;
 using CommanderPeriscope.Domain.Game;
 using CommanderPeriscope.Domain.Maps;
@@ -31,8 +32,22 @@ public static class GameStateViews
         return new MapView(map.Size, land);
     }
 
-    public static CaptainView CaptainViewFor(GameEngine engine, Submarine sub) =>
-        new(sub.Position, engine.SectorFor(sub), sub.Trail, sub.Mines, sub.CanActivateSystem);
+    public static CaptainView CaptainViewFor(GameEngine engine, Submarine sub)
+    {
+        var gauges = sub.Gauges.All
+            .Select(g => new GaugeView(g.Type, g.Charge, g.Capacity, g.IsReady))
+            .ToList();
+
+        return new CaptainView(
+            sub.Position,
+            engine.SectorFor(sub),
+            sub.Trail,
+            sub.Mines,
+            sub.CanActivateSystem,
+            gauges,
+            BlockedColorsFor(sub),
+            sub.PendingDamageReport);
+    }
 
     public static FirstMateView FirstMateViewFor(Submarine sub)
     {
@@ -49,14 +64,34 @@ public static class GameStateViews
             .Select(ToView)
             .ToList();
 
-        return new EngineerView(breakdowns);
+        return new EngineerView(breakdowns, sub.PendingDamageReport);
     }
 
     public static RadioOperatorView RadioOperatorViewFor() => new();
 
-    /// <summary>Which system colors are currently blocked for this sub — the only detail the Engineer's board ever reveals to the enemy, and only while surfaced.</summary>
-    public static IReadOnlySet<SystemColor> BlockedColorsFor(Submarine sub) =>
-        Enum.GetValues<SystemColor>().Where(sub.Engineer.IsSystemBlocked).ToHashSet();
+    public static RepairSessionView RepairSessionViewFor(GameEngine engine)
+    {
+        if (engine.ActiveRealTimeRepair is { } realTime)
+        {
+            var team = engine.Red.Surfaced ? TeamColor.Red : engine.Blue.Surfaced ? TeamColor.Blue : (TeamColor?)null;
+            return new RepairSessionView(Active: true, RealTime: true, team, realTime.SecuredRoles.ToList(), BonusActionsRemaining: null);
+        }
+
+        if (engine.ActiveTurnByTurnSurface is { IsComplete: false } turnByTurn)
+        {
+            return new RepairSessionView(Active: true, RealTime: false, turnByTurn.SurfacingTeam, [], turnByTurn.BonusActionsRemaining);
+        }
+
+        return new RepairSessionView(Active: false, RealTime: false, SurfacingTeam: null, [], BonusActionsRemaining: null);
+    }
+
+    /// <summary>
+    /// Which system colors are currently blocked for this sub — the only detail the Engineer's board ever
+    /// reveals to the enemy, and only while surfaced. A list, not a set: System.Text.Json cannot deserialize
+    /// into IReadOnlySet&lt;T&gt; client-side (it only knows how to instantiate concrete/list-shaped collections).
+    /// </summary>
+    public static IReadOnlyList<SystemColor> BlockedColorsFor(Submarine sub) =>
+        Enum.GetValues<SystemColor>().Where(sub.Engineer.IsSystemBlocked).ToList();
 
     private static bool IsSystemBlocked(this EngineerBoard board, SystemColor color) =>
         board.Breakdowns.OfType<SystemBreakdown>().Any(s => s.Color == color && s.IsMarked);

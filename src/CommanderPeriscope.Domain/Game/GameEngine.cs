@@ -55,6 +55,7 @@ public sealed class GameEngine
         EnsureNotOver();
         var sub = SubFor(team);
         EnsureNotSurfaced(sub);
+        RequireNoPendingDamageReport(sub);
 
         var next = GameMap.Step(RequirePosition(sub), direction);
         if (!Map.CanMoveTo(next, sub.Trail))
@@ -63,6 +64,11 @@ public sealed class GameEngine
         }
 
         sub.MoveTo(next);
+
+        if (Options.MandatoryDamageReportEnabled)
+        {
+            sub.SetPendingDamageReport();
+        }
     }
 
     /// <summary>Activates Silence: up to 4 unannounced moves in a single straight line, then clears the gauge.</summary>
@@ -199,6 +205,7 @@ public sealed class GameEngine
         EnsureNotOver();
         var sub = SubFor(team);
         var result = sub.Engineer.MarkBreakdown(breakdownItem);
+        sub.ClearPendingDamageReport();
 
         switch (result)
         {
@@ -369,6 +376,14 @@ public sealed class GameEngine
 
     private static Coordinate RequirePosition(Submarine sub) =>
         sub.Position ?? throw new InvalidOperationException("Submarine has no starting position set yet.");
+
+    private static void RequireNoPendingDamageReport(Submarine sub)
+    {
+        if (sub.PendingDamageReport)
+        {
+            throw new InvalidOperationException("Move blocked — the Engineer must mark the current damage report first.");
+        }
+    }
 
     private static void EnsureNotSurfaced(Submarine sub)
     {

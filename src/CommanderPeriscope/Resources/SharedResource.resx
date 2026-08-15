@@ -190,4 +190,88 @@
   <data name="TieHeading" xml:space="preserve">
     <value>It's a Tie!</value>
   </data>
+  <data name="ActivateButton" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="DamageLabel" xml:space="preserve">
+    <value>Damage</value>
+  </data>
+  <data name="RepositionOverlayHint" xml:space="preserve">
+    <value>Hold Shift and drag the map to reposition the overlay grid.</value>
+  </data>
+  <data name="ResetOverlay" xml:space="preserve">
+    <value>Reset Overlay</value>
+  </data>
+  <data name="NotesLabel" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="PendingDamageReportBanner" xml:space="preserve">
+    <value>Mandatory Damage Report: mark a breakdown to clear the Captain's next order.</value>
+  </data>
+  <data name="PendingDamageReportCaptainBanner" xml:space="preserve">
+    <value>Waiting on the Engineer's damage report before your next order.</value>
+  </data>
+  <data name="RadiationLabel" xml:space="preserve">
+    <value>Radiation</value>
+  </data>
+  <data name="RepairInProgressFor" xml:space="preserve">
+    <value>{0} team repairing</value>
+  </data>
+  <data name="TapNodeButton" xml:space="preserve">
+    <value>Tap Node</value>
+  </data>
+  <data name="HoldToTraceButton" xml:space="preserve">
+    <value>Hold &amp; Release to Trace</value>
+  </data>
+  <data name="BonusActionsRemaining" xml:space="preserve">
+    <value>{0} bonus actions remaining</value>
+  </data>
+  <data name="TakeBonusActionButton" xml:space="preserve">
+    <value>Take Bonus Action</value>
+  </data>
+  <data name="SetStartingPositionPrompt" xml:space="preserve">
+    <value>Click a starting dot to dive.</value>
+  </data>
+  <data name="SectorLabel" xml:space="preserve">
+    <value>Sector {0}</value>
+  </data>
+  <data name="ColorBlockedChip" xml:space="preserve">
+    <value>{0} blocked</value>
+  </data>
+  <data name="CaptainModeMove" xml:space="preserve">
+    <value>Move</value>
+  </data>
+  <data name="CaptainModeMine" xml:space="preserve">
+    <value>Mine</value>
+  </data>
+  <data name="CaptainModeTorpedo" xml:space="preserve">
+    <value>Torpedo</value>
+  </data>
+  <data name="CaptainModeSilence" xml:space="preserve">
+    <value>Silence</value>
+  </data>
+  <data name="CaptainModeDetonateMine" xml:space="preserve">
+    <value>Detonate Mine</value>
+  </data>
+  <data name="SilenceDirectionLabel" xml:space="preserve">
+    <value>Direction</value>
+  </data>
+  <data name="SilenceStepsLabel" xml:space="preserve">
+    <value>Steps</value>
+  </data>
+  <data name="LaunchSilenceButton" xml:space="preserve">
+    <value>Launch Silence</value>
+  </data>
+  <data name="NoMinesPlaced" xml:space="preserve">
+    <value>No mines placed yet.</value>
+  </data>
+  <data name="VoicePromptSonar" xml:space="preserve">
+    <value>🔊 Call for Sonar</value>
+  </data>
+  <data name="VoicePromptDrone" xml:space="preserve">
+    <value>🔊 Call for Drone</value>
+  </data>
+  <data name="SurfaceButton" xml:space="preserve">
+    <value>Surface</value>
+  </data>
 </root>
