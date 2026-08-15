@@ -60,7 +60,7 @@ public sealed class EngineerBoard
 
     public bool IsColumnComplete(Direction column) => BreakdownsIn(column).All(s => s.IsMarked);
 
-    public bool IsRadiationFull => Breakdowns.All(s => s is RadiationBreakdown && s.IsMarked);
+    public bool IsRadiationFull => Breakdowns.OfType<RadiationBreakdown>().All(s => s.IsMarked);
 
     public BreakdownResult MarkBreakdown(BreakdownItem item)
     {

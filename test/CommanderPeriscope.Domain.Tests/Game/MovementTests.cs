@@ -25,9 +25,9 @@ public class MovementTests
         var engine = GameEngineFactory.CreateHunt();
 
         engine.Move(TeamColor.Red, Direction.East);
-        engine.Move(TeamColor.Red, Direction.West);
 
-        Assert.Throws<InvalidOperationException>(() => engine.Move(TeamColor.Red, Direction.East));
+        // Immediately reversing revisits the starting dot — still part of this leg's trail.
+        Assert.Throws<InvalidOperationException>(() => engine.Move(TeamColor.Red, Direction.West));
     }
 
     [Fact]

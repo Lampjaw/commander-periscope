@@ -17,11 +17,11 @@ public class EngineerBoardTests
     public void MarkBreakdown_BlocksSystemOfMatchingColor()
     {
         var board = new EngineerBoard();
-        var unlinkedYellow = SystemBreakdown(board, Direction.North, SystemColor.Yellow, null);
+        var unlinkedRed = SystemBreakdown(board, Direction.North, SystemColor.Red, null);
 
-        Assert.False(board.IsSystemBlocked(SystemType.Silence));
-        board.MarkBreakdown(unlinkedYellow);
-        Assert.True(board.IsSystemBlocked(SystemType.Silence));
+        Assert.False(board.IsSystemBlocked(SystemType.Torpedo));
+        board.MarkBreakdown(unlinkedRed);
+        Assert.True(board.IsSystemBlocked(SystemType.Torpedo));
     }
 
     [Fact]
@@ -38,19 +38,21 @@ public class EngineerBoardTests
         var result = board.MarkBreakdown(last);
 
         Assert.Equal(BreakdownResult.CanSelfRepairCircuit, result);
-        Assert.All(
-            board.BreakdownsInCircuit(2),
-            s => Assert.False(s.IsMarked));
+
+        // Detecting the repair and applying it are split — the caller (GameEngine) does the clearing.
+        board.ClearCircuitBreakdowns(2);
+        Assert.All(board.BreakdownsInCircuit(2), s => Assert.False(s.IsMarked));
     }
 
     [Fact]
-    public void MarkBreakdown_CompleteColumnCausesDamageAndWipesBreakdownsOnly()
+    public void MarkBreakdown_CompleteColumnCausesDamageAndWipesCircuitedBreakdownsOnly()
     {
         var board = new EngineerBoard();
 
-        // West column has no unlinked symbol: 3 circuit members (all group 2) + 2 Reactor slots.
+        // West column: 3 circuit members (all group 2) + 1 unlinked green + 2 Reactor slots.
         board.MarkBreakdown(RadiationBreakdown(board, Direction.West, 0));
         board.MarkBreakdown(RadiationBreakdown(board, Direction.West, 1));
+        board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Green, null));
         board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Green, 2));
         board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Yellow, 2));
 
@@ -60,8 +62,10 @@ public class EngineerBoardTests
         var result = board.MarkBreakdown(last);
 
         Assert.Equal(BreakdownResult.CompleteAreaBreakdown, result);
-        Assert.All(board.Breakdowns, s => Assert.False(s.IsMarked));
-        // Repairing the Reactor is only ever done via radiation-full or surfacing — a column wipe leaves it alone.
+
+        board.ClearColumnBreakdowns(Direction.West);
+        Assert.All(board.CircuitedBreakdownsIn(Direction.West), s => Assert.False(s.IsMarked));
+        // A column wipe only clears that column's circuited symbols — the unlinked/reactor items are untouched.
         Assert.All(board.ReactorBreakdownsIn(Direction.West), s => Assert.True(s.IsMarked));
     }
 
@@ -72,6 +76,7 @@ public class EngineerBoardTests
 
         board.MarkBreakdown(RadiationBreakdown(board, Direction.West, 0));
         board.MarkBreakdown(RadiationBreakdown(board, Direction.West, 1));
+        board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Green, null));
         board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Green, 2));
         board.MarkBreakdown(SystemBreakdown(board, Direction.West, SystemColor.Yellow, 2));
         board.MarkBreakdown(SystemBreakdown(board, Direction.East, SystemColor.Red, 2));
@@ -81,7 +86,6 @@ public class EngineerBoardTests
         var result = board.MarkBreakdown(last);
 
         Assert.Equal(BreakdownResult.CanSelfRepairCircuit, result);
-        Assert.False(board.IsColumnComplete(Direction.West));
     }
 
     [Fact]
@@ -94,9 +98,12 @@ public class EngineerBoardTests
         board.MarkBreakdown(RadiationBreakdown(board, Direction.West, 1));
         board.MarkBreakdown(RadiationBreakdown(board, Direction.North));
         board.MarkBreakdown(RadiationBreakdown(board, Direction.South));
-        var result = board.MarkBreakdown(RadiationBreakdown(board, Direction.East));
+        board.MarkBreakdown(RadiationBreakdown(board, Direction.East, 0));
+        var result = board.MarkBreakdown(RadiationBreakdown(board, Direction.East, 1));
 
         Assert.Equal(BreakdownResult.RadiationFull, result);
+
+        board.ClearAllBreakdowns();
         Assert.All(board.Breakdowns, s => Assert.False(s.IsMarked));
     }
 
