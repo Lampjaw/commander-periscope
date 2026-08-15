@@ -168,6 +168,7 @@ public sealed class LobbyService(ILobbyRepository repository)
             lobby.Game = new GameEngine(loadedMap.Map, lobby.Options.ToGameOptions());
             lobby.Status = LobbyStatus.InProgress;
             lobby.PauseReason = PauseReason.None;
+            lobby.CurrentOrderTeam = TeamColor.Red;
         }
 
         Notify(lobby);

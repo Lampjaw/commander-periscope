@@ -1,5 +1,7 @@
+using System.Text.Json.Serialization;
 using CommanderPeriscope;
 using CommanderPeriscope.Components;
+using CommanderPeriscope.Hubs;
 using CommanderPeriscope.Lobby;
 using CommanderPeriscope.Session;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -24,6 +26,10 @@ builder.Services.AddScoped<PlayerIdentityService>();
 builder.Services.AddScoped<CircuitPlayerContext>();
 builder.Services.AddScoped<CircuitHandler, LobbyCircuitHandler>();
 
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddSingleton<GameConnectionRegistry>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -40,4 +46,9 @@ app.UseLocalizationSupport();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+app.MapHub<GameHub>("/hubs/game");
+
 app.Run();
+
+/// <summary>Exposed so <c>WebApplicationFactory&lt;Program&gt;</c> can host this app in-process for integration tests.</summary>
+public partial class Program;

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <!-- These integration tests drive real HubConnections against an in-process server; per-call cancellation
+         tokens add noise without adding coverage here, since the whole test already has an overall timeout. -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CommanderPeriscope\CommanderPeriscope.csproj" />
+    <ProjectReference Include="..\..\src\CommanderPeriscope.Domain\CommanderPeriscope.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CommanderPeriscope.Lobby\CommanderPeriscope.Lobby.csproj" />
+    <ProjectReference Include="..\..\src\CommanderPeriscope.Visibility\CommanderPeriscope.Visibility.csproj" />
+  </ItemGroup>
+
+</Project>

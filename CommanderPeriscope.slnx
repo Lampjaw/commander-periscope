@@ -9,5 +9,6 @@
     <Project Path="test/CommanderPeriscope.Domain.Tests/CommanderPeriscope.Domain.Tests.csproj" />
     <Project Path="test/CommanderPeriscope.Visibility.Tests/CommanderPeriscope.Visibility.Tests.csproj" />
     <Project Path="test/CommanderPeriscope.Lobby.Tests/CommanderPeriscope.Lobby.Tests.csproj" />
+    <Project Path="test/CommanderPeriscope.Web.Tests/CommanderPeriscope.Web.Tests.csproj" />
   </Folder>
 </Solution>

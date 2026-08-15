@@ -21,6 +21,13 @@ public sealed class Lobby(string code, string hostPlayerId, LobbyOptions options
 
     public GameEngine? Game { get; set; }
 
+    /// <summary>
+    /// Turn-by-Turn pacing only: which team's Captain may give the next order. Ignored entirely in Real-Time
+    /// games. Enforced at the hub layer, not inside <see cref="GameEngine"/> — the domain engine stays
+    /// pacing-agnostic beyond what it already needs for the surface bonus-round mechanic.
+    /// </summary>
+    public TeamColor CurrentOrderTeam { get; set; } = TeamColor.Red;
+
     public int Capacity => Options.RedTeamSize + Options.BlueTeamSize;
 
     public TeamRoster RosterFor(TeamColor team) => team == TeamColor.Red ? Red : Blue;

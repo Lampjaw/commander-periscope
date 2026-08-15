@@ -87,4 +87,31 @@ public static class ScopedBroadcastPlanner
 
         return broadcasts;
     }
+
+    /// <summary>Refreshes just one team's own Captain view — the atomic building block for any intent that moves the sub, changes its mines, or flips its activation gate.</summary>
+    public static ScopedBroadcast PlanCaptainRefresh(string gameId, GameEngine engine, TeamColor team) =>
+        new(GroupNames.Role(gameId, team, CrewRole.Captain), GameStateViews.CaptainViewFor(engine, engine.SubFor(team)));
+
+    /// <summary>Refreshes just one team's own First Mate view — the atomic building block for any intent that charges or clears a gauge.</summary>
+    public static ScopedBroadcast PlanFirstMateRefresh(string gameId, GameEngine engine, TeamColor team) =>
+        new(GroupNames.Role(gameId, team, CrewRole.FirstMate), GameStateViews.FirstMateViewFor(engine.SubFor(team)));
+
+    /// <summary>Refreshes just one team's own Engineer view — the atomic building block for any intent that clears breakdowns (e.g. completing a repair).</summary>
+    public static ScopedBroadcast PlanEngineerRefresh(string gameId, GameEngine engine, TeamColor team) =>
+        new(GroupNames.Role(gameId, team, CrewRole.Engineer), GameStateViews.EngineerViewFor(engine.SubFor(team)));
+
+    /// <summary>A public toast — only ever built from information the tabletop rules already require announcing aloud.</summary>
+    public static ScopedBroadcast PlanToast(string gameId, string message) =>
+        new(GroupNames.AllPlayers(gameId), new GameToastPayload(message));
+
+    /// <summary>Once the game has ended, tells every player how — win, loss, or tie.</summary>
+    public static IReadOnlyList<ScopedBroadcast> PlanGameOver(string gameId, GameEngine engine) =>
+        engine.IsOver ? [new ScopedBroadcast(GroupNames.AllPlayers(gameId), new GameOverPayload(engine.Result))] : [];
+
+    /// <summary>
+    /// After a repair completes (real-time or turn-by-turn): the trail clears, breakdowns wipe, and the sub
+    /// stops being surfaced — refresh that team's Captain, Engineer, and both teams' public status bars.
+    /// </summary>
+    public static IReadOnlyList<ScopedBroadcast> PlanRepairComplete(string gameId, GameEngine engine, TeamColor team) =>
+        [.. PlanStatusBars(gameId, engine), PlanCaptainRefresh(gameId, engine, team), PlanEngineerRefresh(gameId, engine, team)];
 }
