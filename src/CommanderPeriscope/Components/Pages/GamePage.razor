@@ -56,13 +56,6 @@ else
             </div>
         }
 
-        @if (_activeRole is not CrewRole.Captain and not CrewRole.RadioOperator)
-        {
-            <div class="map-grid-wrap">
-                <MapGrid Map="_map" />
-            </div>
-        }
-
         @switch (_activeRole)
         {
             case CrewRole.Captain:
