@@ -3,6 +3,7 @@ using CommanderPeriscope.Domain.Common;
 using CommanderPeriscope.Domain.Game;
 using CommanderPeriscope.Domain.Maps;
 using CommanderPeriscope.Domain.Systems;
+using CommanderPeriscope.Visibility.Views;
 using CommanderPeriscope.Web.Tests.TestSupport;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -153,5 +154,55 @@ public class GameHubGameplayTests : IAsyncLifetime
 
         Assert.Null(engine.ActiveRealTimeRepair);
         Assert.False(engine.Red.Surfaced);
+    }
+
+    /// <summary>
+    /// Phase 8 anti-cheat audit: a scripted "rogue" listener on the enemy team, sitting through a whole
+    /// sequence of the other team's private actions (move, mine, silence, gauge mark, breakdown mark),
+    /// must never once receive a payload type that could leak the opposing sub's position, trail, mines, or
+    /// breakdown detail — replaying the Phase 2 visibility guarantees against the real hub end-to-end rather
+    /// than the projection layer in isolation.
+    /// </summary>
+    [Fact]
+    public async Task RogueEnemyListener_NeverReceivesPrivatePayloadsAcrossAFullSequenceOfRedActions()
+    {
+        var lobby = LobbySeeding.CreateStartedGame(_fixture.LobbyService);
+
+        await using var red = await _fixture.ConnectAsync();
+        await using var blueRogue = await _fixture.ConnectAsync();
+        var rogueMessages = ReceivedMessages.AttachTo(blueRogue);
+
+        await red.InvokeAsync("JoinGame", lobby.Code, LobbySeeding.RedCaptain);
+        // The rogue joins as its own legitimate Blue Radio Operator seat — the narrowest-scoped real role —
+        // and then just listens while Red does everything.
+        await blueRogue.InvokeAsync("JoinGame", lobby.Code, LobbySeeding.BlueRadio);
+
+        await red.InvokeAsync("SetStartingPosition", lobby.Code, LobbySeeding.RedCaptain, new Coordinate(0, 0));
+        await red.InvokeAsync("Move", lobby.Code, LobbySeeding.RedCaptain, Direction.East);
+        // 2-player team: RedCaptain also holds First Mate and Engineer.
+        await red.InvokeAsync("MarkGauge", lobby.Code, LobbySeeding.RedCaptain, SystemType.Mine);
+        await red.InvokeAsync("MarkGauge", lobby.Code, LobbySeeding.RedCaptain, SystemType.Mine);
+        await red.InvokeAsync("MarkGauge", lobby.Code, LobbySeeding.RedCaptain, SystemType.Mine);
+        await red.InvokeAsync("PlaceMine", lobby.Code, LobbySeeding.RedCaptain, new Coordinate(2, 0));
+        await red.InvokeAsync("MarkBreakdown", lobby.Code, LobbySeeding.RedCaptain, 0);
+
+        // Give any stray broadcast a moment to (not) arrive.
+        await Task.Delay(300);
+
+        var leakedTypes = rogueMessages.Snapshot()
+            .Select(m => m.Type)
+            .Where(t => t is nameof(CaptainView) or nameof(FirstMateView) or nameof(EngineerView))
+            .ToList();
+        Assert.Empty(leakedTypes);
+
+        // Every payload the rogue DID receive (status bars, map, its own RadioOperatorView) must never carry
+        // a raw Coordinate-shaped "position", "trail", or "mines" property belonging to Red.
+        foreach (var (type, payload) in rogueMessages.Snapshot())
+        {
+            Assert.False(payload.TryGetProperty("position", out _), $"{type} leaked a position field.");
+            Assert.False(payload.TryGetProperty("trail", out _), $"{type} leaked a trail field.");
+            Assert.False(payload.TryGetProperty("mines", out _), $"{type} leaked a mines field.");
+            Assert.False(payload.TryGetProperty("breakdowns", out _), $"{type} leaked breakdown detail.");
+        }
     }
 }

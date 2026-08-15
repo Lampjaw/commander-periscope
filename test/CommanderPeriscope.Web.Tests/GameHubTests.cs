@@ -154,4 +154,112 @@ public class GameHubTests : IAsyncLifetime
         await Task.Delay(200);
         Assert.Equal(blueEngineerViewsBefore, blueMessages.Snapshot().Count(x => x.Type == "EngineerView"));
     }
+
+    [Fact]
+    public async Task Move_ThrowsWhilePausedByTheHost_EvenForAnOtherwiseLegalMove()
+    {
+        var lobby = LobbySeeding.CreateStartedGame(_fixture.LobbyService);
+        await using var red = await _fixture.ConnectAsync();
+
+        await red.InvokeAsync("JoinGame", lobby.Code, LobbySeeding.RedCaptain);
+        await red.InvokeAsync("SetStartingPosition", lobby.Code, LobbySeeding.RedCaptain, new Coordinate(0, 0));
+
+        _fixture.LobbyService.Pause(lobby.Code, LobbySeeding.RedCaptain);
+
+        var ex = await Assert.ThrowsAsync<HubException>(() =>
+            red.InvokeAsync("Move", lobby.Code, LobbySeeding.RedCaptain, Direction.East));
+        Assert.Contains("paused", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Move_ThrowsWhileAutoPausedByAnOpponentDisconnect()
+    {
+        var lobby = LobbySeeding.CreateStartedGame(_fixture.LobbyService);
+        await using var red = await _fixture.ConnectAsync();
+
+        await red.InvokeAsync("JoinGame", lobby.Code, LobbySeeding.RedCaptain);
+        await red.InvokeAsync("SetStartingPosition", lobby.Code, LobbySeeding.RedCaptain, new Coordinate(0, 0));
+
+        // PauseOnDisconnect defaults to on — simulate the Blue Captain's connection dropping.
+        _fixture.LobbyService.HandleDisconnect(lobby.Code, LobbySeeding.BlueCaptain);
+
+        var ex = await Assert.ThrowsAsync<HubException>(() =>
+            red.InvokeAsync("Move", lobby.Code, LobbySeeding.RedCaptain, Direction.East));
+        Assert.Contains("paused", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MarkGauge_WhenFirstMateDisconnectsWithPauseOnDisconnectOff_TheCaptainCanAbsorbTheRole()
+    {
+        var service = _fixture.LobbyService;
+        var lobby = service.CreateLobby("captain", "Captain", "10x10");
+        service.UpdateOptions(lobby.Code, "captain", lobby.Options with { RedTeamSize = 4, BlueTeamSize = 2, PauseOnDisconnect = false });
+        service.Join(lobby.Code, "firstMate", "First Mate");
+        service.Join(lobby.Code, "engineer", "Engineer");
+        service.Join(lobby.Code, "radio", "Radio");
+        service.Join(lobby.Code, "blueCaptain", "Blue Captain");
+        service.Join(lobby.Code, "blueRadio", "Blue Radio");
+
+        service.ClaimRole(lobby.Code, "captain", TeamColor.Red, CrewRole.Captain);
+        service.ClaimRole(lobby.Code, "firstMate", TeamColor.Red, CrewRole.FirstMate);
+        service.ClaimRole(lobby.Code, "engineer", TeamColor.Red, CrewRole.Engineer);
+        service.ClaimRole(lobby.Code, "radio", TeamColor.Red, CrewRole.RadioOperator);
+        service.ClaimRole(lobby.Code, "blueCaptain", TeamColor.Blue, CrewRole.Captain);
+        service.ClaimRole(lobby.Code, "blueRadio", TeamColor.Blue, CrewRole.RadioOperator);
+
+        foreach (var id in new[] { "captain", "firstMate", "engineer", "radio", "blueCaptain", "blueRadio" })
+        {
+            service.SetReady(lobby.Code, id, true);
+        }
+
+        service.StartGame(lobby.Code, "captain");
+
+        await using var captainConn = await _fixture.ConnectAsync();
+        var firstMateConn = await _fixture.ConnectAsync();
+        var captainMessages = ReceivedMessages.AttachTo(captainConn);
+
+        await captainConn.InvokeAsync("JoinGame", lobby.Code, "captain");
+        await firstMateConn.InvokeAsync("JoinGame", lobby.Code, "firstMate");
+
+        // Before the disconnect, the Captain acting as First Mate is illegal — it's a real, separately-held seat.
+        await Assert.ThrowsAsync<HubException>(() =>
+            captainConn.InvokeAsync("MarkGauge", lobby.Code, "captain", SystemType.Torpedo));
+
+        await firstMateConn.StopAsync();
+        await firstMateConn.DisposeAsync();
+
+        // The server processes OnDisconnectedAsync asynchronously relative to the client's StopAsync returning —
+        // retry briefly rather than racing it with a single attempt.
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (true)
+        {
+            try
+            {
+                await captainConn.InvokeAsync("MarkGauge", lobby.Code, "captain", SystemType.Torpedo);
+                break;
+            }
+            catch (HubException) when (DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(50);
+            }
+        }
+
+        await captainMessages.WaitUntilAsync(m => m.Any("FirstMateView"));
+        Assert.True(captainMessages.Any("FirstMateView"));
+    }
+
+    [Fact]
+    public async Task JoinGame_StillWorksWhilePaused_SoAReconnectingPlayerCanSeeState()
+    {
+        var lobby = LobbySeeding.CreateStartedGame(_fixture.LobbyService);
+        _fixture.LobbyService.Pause(lobby.Code, LobbySeeding.RedCaptain);
+
+        await using var red = await _fixture.ConnectAsync();
+        var redMessages = ReceivedMessages.AttachTo(red);
+
+        await red.InvokeAsync("JoinGame", lobby.Code, LobbySeeding.RedCaptain);
+        await redMessages.WaitUntilAsync(m => m.Any("CaptainView"));
+
+        Assert.True(redMessages.Any("CaptainView"));
+    }
 }

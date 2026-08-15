@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace CommanderPeriscope.Hubs;
 
@@ -19,4 +20,11 @@ public sealed class GameConnectionRegistry
         _connections.TryGetValue(connectionId, out info);
 
     public void Remove(string connectionId) => _connections.TryRemove(connectionId, out _);
+
+    /// <summary>Every live connection currently joined to the given lobby — used to re-sync SignalR group membership across a whole team when a disconnect/reconnect changes who's absorbing a teammate's role.</summary>
+    public IReadOnlyList<(string ConnectionId, string PlayerId)> ConnectionsFor(string lobbyCode) =>
+        _connections
+            .Where(kv => kv.Value.LobbyCode == lobbyCode)
+            .Select(kv => (kv.Key, kv.Value.PlayerId))
+            .ToList();
 }

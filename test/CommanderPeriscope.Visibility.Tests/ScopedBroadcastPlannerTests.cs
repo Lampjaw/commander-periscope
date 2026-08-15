@@ -174,4 +174,46 @@ public class ScopedBroadcastPlannerTests
         Assert.DoesNotContain(properties, t => t == typeof(Domain.Maps.Coordinate) || t == typeof(Domain.Maps.Coordinate?));
         Assert.DoesNotContain(properties, t => typeof(System.Collections.IEnumerable).IsAssignableFrom(t) && t != typeof(string) && t.IsGenericType && t.GetGenericArguments()[0] == typeof(Domain.Maps.Coordinate));
     }
+
+    [Fact]
+    public void PlanRepairSessionRefresh_RealTimeRepair_GoesOnlyToTheSurfacingTeamsOwnGroup()
+    {
+        var engine = GameEngineFactory.Create(new GameOptions(GameMode.Hunt, PacingMode.RealTime));
+        engine.Surface(TeamColor.Red);
+
+        var broadcast = ScopedBroadcastPlanner.PlanRepairSessionRefresh(GameId, engine);
+
+        Assert.Equal(GroupNames.Team(GameId, TeamColor.Red), broadcast.Group);
+        Assert.NotEqual(GroupNames.AllPlayers(GameId), broadcast.Group);
+        Assert.NotEqual(GroupNames.Team(GameId, TeamColor.Blue), broadcast.Group);
+
+        var payload = Assert.IsType<RepairSessionView>(broadcast.Payload);
+        Assert.True(payload.Active);
+        Assert.True(payload.RealTime);
+    }
+
+    [Fact]
+    public void PlanRepairSessionRefresh_TurnByTurnBonusRound_IsPublicToBothTeams()
+    {
+        var engine = GameEngineFactory.Create(new GameOptions(GameMode.Hunt, PacingMode.TurnByTurn));
+        engine.Surface(TeamColor.Red);
+
+        var broadcast = ScopedBroadcastPlanner.PlanRepairSessionRefresh(GameId, engine);
+
+        Assert.Equal(GroupNames.AllPlayers(GameId), broadcast.Group);
+        var payload = Assert.IsType<RepairSessionView>(broadcast.Payload);
+        Assert.True(payload.Active);
+        Assert.False(payload.RealTime);
+    }
+
+    [Fact]
+    public void PlanRepairSessionRefresh_NoActiveRepair_IsPublicToBothTeams()
+    {
+        var engine = GameEngineFactory.Create();
+
+        var broadcast = ScopedBroadcastPlanner.PlanRepairSessionRefresh(GameId, engine);
+
+        Assert.Equal(GroupNames.AllPlayers(GameId), broadcast.Group);
+        Assert.False(((RepairSessionView)broadcast.Payload).Active);
+    }
 }

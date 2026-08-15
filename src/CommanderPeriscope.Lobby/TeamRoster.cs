@@ -39,6 +39,45 @@ public sealed class TeamRoster(TeamColor color)
 
     public bool IsRoleClaimed(CrewRole role) => OccupantOf(role) is not null;
 
+    /// <summary>
+    /// Which role a disconnected role's duties fall back to when "Pause on Player Disconnect" is off — reusing
+    /// the exact same target the under-crewed-team groupings already use for that role (§2.2), just applied
+    /// per-role instead of scaling the whole team down (which would wrongly also reassign a still-connected
+    /// teammate's role). Radio Operator and Captain have no fallback: nobody else absorbs them.
+    /// </summary>
+    private static CrewRole? AbsorptionFallback(CrewRole role) => role switch
+    {
+        CrewRole.FirstMate or CrewRole.Engineer => CrewRole.Captain,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Who may currently act for <paramref name="role"/>: its own occupant if connected, otherwise — when
+    /// "Pause on Player Disconnect" is off, so the game is still running — whoever the role's absorption
+    /// fallback occupant is, if that player is connected. Falls back to the real occupant (even if
+    /// disconnected, e.g. no one connected can absorb it) rather than returning null, since the seat itself
+    /// is still claimed.
+    /// </summary>
+    public string? ActingOccupantOf(CrewRole role, Func<string, bool> isConnected)
+    {
+        var occupant = OccupantOf(role);
+        if (occupant is null || isConnected(occupant))
+        {
+            return occupant;
+        }
+
+        if (AbsorptionFallback(role) is { } fallbackRole)
+        {
+            var fallbackOccupant = OccupantOf(fallbackRole);
+            if (fallbackOccupant is not null && isConnected(fallbackOccupant))
+            {
+                return fallbackOccupant;
+            }
+        }
+
+        return occupant;
+    }
+
     public CrewRole? SeatOf(string playerId)
     {
         foreach (var (seatRole, occupantId) in _seats)

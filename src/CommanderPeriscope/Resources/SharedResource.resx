@@ -197,10 +197,16 @@
     <value>Damage</value>
   </data>
   <data name="RepositionOverlayHint" xml:space="preserve">
-    <value>Hold Shift and drag the map to reposition the overlay grid.</value>
+    <value>Hold Shift and drag (or tap "Reposition Overlay" on touch) to move the overlay grid.</value>
   </data>
   <data name="ResetOverlay" xml:space="preserve">
     <value>Reset Overlay</value>
+  </data>
+  <data name="RepositionOverlay" xml:space="preserve">
+    <value>Reposition Overlay</value>
+  </data>
+  <data name="StopRepositionOverlay" xml:space="preserve">
+    <value>Done Repositioning</value>
   </data>
   <data name="NotesLabel" xml:space="preserve">
     <value>Notes</value>

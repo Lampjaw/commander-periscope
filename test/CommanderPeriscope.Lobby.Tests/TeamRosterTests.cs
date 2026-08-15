@@ -100,4 +100,74 @@ public class TeamRosterTests
 
         Assert.Equal(2, roster.DistinctPlayerIds.Count);
     }
+
+    private static TeamRoster FullyStaffedFourPlayerTeam()
+    {
+        var roster = new TeamRoster(TeamColor.Red) { ConfiguredSize = 4 };
+        roster.Claim(CrewRole.Captain, "captain");
+        roster.Claim(CrewRole.FirstMate, "firstMate");
+        roster.Claim(CrewRole.Engineer, "engineer");
+        roster.Claim(CrewRole.RadioOperator, "radio");
+        return roster;
+    }
+
+    [Fact]
+    public void ActingOccupantOf_ReturnsTheRealOccupantWhenConnected()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+
+        Assert.Equal("firstMate", roster.ActingOccupantOf(CrewRole.FirstMate, _ => true));
+    }
+
+    [Fact]
+    public void ActingOccupantOf_FirstMateDisconnected_FallsBackToTheCaptain()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+
+        var actingOccupant = roster.ActingOccupantOf(CrewRole.FirstMate, playerId => playerId != "firstMate");
+
+        Assert.Equal("captain", actingOccupant);
+    }
+
+    [Fact]
+    public void ActingOccupantOf_EngineerDisconnected_FallsBackToTheCaptainWithoutAffectingFirstMate()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+        bool IsConnected(string playerId) => playerId != "engineer";
+
+        Assert.Equal("captain", roster.ActingOccupantOf(CrewRole.Engineer, IsConnected));
+        // Crucially, First Mate is still connected and must NOT be reassigned just because Engineer dropped —
+        // a naive "shrink the whole team" implementation would wrongly hand First Mate to the Captain too.
+        Assert.Equal("firstMate", roster.ActingOccupantOf(CrewRole.FirstMate, IsConnected));
+    }
+
+    [Fact]
+    public void ActingOccupantOf_RadioOperatorDisconnected_HasNoFallback()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+
+        var actingOccupant = roster.ActingOccupantOf(CrewRole.RadioOperator, playerId => playerId != "radio");
+
+        Assert.Equal("radio", actingOccupant); // still the real (disconnected) occupant — nobody absorbs it
+    }
+
+    [Fact]
+    public void ActingOccupantOf_CaptainDisconnected_HasNoFallback()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+
+        var actingOccupant = roster.ActingOccupantOf(CrewRole.Captain, playerId => playerId != "captain");
+
+        Assert.Equal("captain", actingOccupant);
+    }
+
+    [Fact]
+    public void ActingOccupantOf_FirstMateAndItsFallbackBothDisconnected_ReturnsTheRealOccupant()
+    {
+        var roster = FullyStaffedFourPlayerTeam();
+
+        var actingOccupant = roster.ActingOccupantOf(CrewRole.FirstMate, playerId => playerId is not ("firstMate" or "captain"));
+
+        Assert.Equal("firstMate", actingOccupant);
+    }
 }

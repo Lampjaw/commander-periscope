@@ -7,6 +7,7 @@
 @inject PlayerIdentityService PlayerIdentity
 @inject CircuitPlayerContext CircuitContext
 @inject NavigationManager Navigation
+@inject InternalHubUrlResolver HubUrlResolver
 @inject IStringLocalizer<SharedResource> L
 @implements IAsyncDisposable
 
@@ -154,8 +155,16 @@ else
         CircuitContext.SetPlayer(Code, _playerId);
         LobbyService.LobbyChanged += OnLobbyChanged;
 
+        // Must use an address the server process can reach itself, not the browser's externally-visible one —
+        // this HubConnection is a server-side SignalR client (Blazor Server components run on the server), and
+        // those can differ (Docker port remapping, reverse proxies). Falls back to the browser-relative URI
+        // only when no real listener address is available (e.g. certain test hosts).
+        var hubUri = HubUrlResolver.ResolveBaseAddress() is { } baseAddress
+            ? new Uri(baseAddress, "/hubs/game")
+            : Navigation.ToAbsoluteUri("/hubs/game");
+
         _hub = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/hubs/game"))
+            .WithUrl(hubUri)
             .WithAutomaticReconnect()
             .Build();
 

@@ -1,7 +1,10 @@
 @* §3.6: sliding overlay grid (a client-local render offset over the shared MapGrid — never sent to the server,
    per the design note: hold Shift and drag to reposition) and a full-map deduction grid the Radio Operator
    marks up privately while listening for the enemy's spoken heading calls. Entirely client-side state: nothing
-   here is shared game state, so none of it goes through the hub. *@
+   here is shared game state, so none of it goes through the hub.
+
+   Touch devices have no Shift key, so the "Reposition Overlay" toggle button is the touch-equivalent entry
+   point into the same drag mode — either one arms dragging, so a mouse user can still just hold Shift. *@
 
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -14,9 +17,14 @@
         <div @ref="_overlayRef" class="radio-overlay-grid"></div>
     </div>
 
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
         <p class="text-xs text-slate-500">@L["RepositionOverlayHint"]</p>
-        <button class="btn-secondary" @onclick="ResetOverlay">@L["ResetOverlay"]</button>
+        <div class="flex gap-2">
+            <button class="btn-secondary @(_repositioning ? "toggle-btn-active" : "")" @onclick="ToggleRepositioning">
+                @(_repositioning ? L["StopRepositionOverlay"] : L["RepositionOverlay"])
+            </button>
+            <button class="btn-secondary" @onclick="ResetOverlay">@L["ResetOverlay"]</button>
+        </div>
     </div>
 
     @if (Map is not null)
@@ -53,6 +61,7 @@
     private IJSObjectReference? _module;
     private IJSObjectReference? _dragHandle;
     private bool _attached;
+    private bool _repositioning;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -77,6 +86,15 @@
         if (_dragHandle is not null)
         {
             await _dragHandle.InvokeVoidAsync("reset");
+        }
+    }
+
+    private async Task ToggleRepositioning()
+    {
+        _repositioning = !_repositioning;
+        if (_dragHandle is not null)
+        {
+            await _dragHandle.InvokeVoidAsync("setToggledOn", _repositioning);
         }
     }
 

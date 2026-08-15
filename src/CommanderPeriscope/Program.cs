@@ -29,6 +29,7 @@ builder.Services.AddScoped<CircuitHandler, LobbyCircuitHandler>();
 builder.Services.AddSignalR()
     .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSingleton<GameConnectionRegistry>();
+builder.Services.AddSingleton<InternalHubUrlResolver>();
 
 var app = builder.Build();
 

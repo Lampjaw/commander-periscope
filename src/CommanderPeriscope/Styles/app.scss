@@ -179,6 +179,8 @@
 
   .radio-overlay-grid {
     @apply pointer-events-none absolute inset-4 rounded-lg;
+    // Without this, a touch drag on the overlay also scrolls/pans the page underneath it on mobile browsers.
+    touch-action: none;
     background-image:
       repeating-linear-gradient(0deg, theme("colors.amber.300" / 55%) 0, theme("colors.amber.300" / 55%) 1px, transparent 1px, transparent 28px),
       repeating-linear-gradient(90deg, theme("colors.amber.300" / 55%) 0, theme("colors.amber.300" / 55%) 1px, transparent 1px, transparent 28px);
@@ -186,6 +188,10 @@
 
   .radio-overlay-grid-active {
     @apply cursor-move ring-2 ring-amber-400;
+  }
+
+  .toggle-btn-active {
+    @apply border-slate-900 bg-slate-900 text-white hover:bg-slate-900;
   }
 
   .deduction-grid {
@@ -311,6 +317,12 @@
 
   .repair-minigame {
     @apply flex flex-col items-start gap-1;
+  }
+
+  // The freehand-trace button uses pointerdown/pointerup for its "hold and release" gesture — without this,
+  // a touch hold can trigger the browser's own scroll/long-press gesture instead of registering the trace.
+  .repair-minigame button {
+    touch-action: none;
   }
 
   .repair-bonus {

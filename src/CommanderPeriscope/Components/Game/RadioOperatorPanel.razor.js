@@ -1,12 +1,20 @@
+// Two ways to enter "reposition" mode: hold the modifier key (desktop, matches the design note) or toggle
+// it on with a button (touch devices have no keyboard, so the key-hold path alone would strand them).
 export function attachOverlayDrag(overlayElement, modifierKey) {
     let dragging = false;
     let startX = 0, startY = 0, originX = 0, originY = 0;
     let offsetX = 0, offsetY = 0;
     let keyHeld = false;
+    let toggledOn = false;
+
+    function isActive() {
+        return keyHeld || toggledOn;
+    }
 
     function syncInteractivity() {
-        overlayElement.style.pointerEvents = keyHeld ? 'auto' : 'none';
-        overlayElement.classList.toggle('radio-overlay-grid-active', keyHeld);
+        const active = isActive();
+        overlayElement.style.pointerEvents = active ? 'auto' : 'none';
+        overlayElement.classList.toggle('radio-overlay-grid-active', active);
     }
 
     function keydown(e) {
@@ -24,7 +32,7 @@ export function attachOverlayDrag(overlayElement, modifierKey) {
     }
 
     function pointerdown(e) {
-        if (!keyHeld) {
+        if (!isActive()) {
             return;
         }
 
@@ -62,6 +70,10 @@ export function attachOverlayDrag(overlayElement, modifierKey) {
             offsetX = 0;
             offsetY = 0;
             overlayElement.style.transform = 'translate(0px, 0px)';
+        },
+        setToggledOn(value) {
+            toggledOn = value;
+            syncInteractivity();
         },
     };
 }
